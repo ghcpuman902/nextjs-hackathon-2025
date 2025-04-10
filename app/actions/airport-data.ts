@@ -1,8 +1,9 @@
 "use server"
 
 import { cache } from "react"
-import { fetchFromFlightAware } from "@/lib/fetch"
-import { getCachedAirport, writeCache, type CachedAirportDetails } from "@/lib/file-utils"
+import { fetchFromFlightAware } from "../../lib/fetch"
+import { getCachedAirport, getCachedDelays, writeCache, writeDelaysCache } from "../../lib/file-utils"
+import type { AirportDelays, AirportDelay, CachedAirportDetails } from "../../lib/types"
 
 export type AirportDetails = {
   airport_code: string
@@ -89,6 +90,64 @@ export const getAirportDetails = cache(async (icaoCode: string) => {
   }
 
   throw new Error(`Failed to fetch details for ${icaoCode} after ${maxRetries} attempts`)
+})
+
+/**
+ * Cached server action to get airport delay information
+ * Uses React's cache function to avoid redundant fetches
+ */
+export const getAirportDelays = cache(async () => {
+  console.log("Fetching airport delays data")
+
+  // Check cache first
+  const cached = getCachedDelays()
+  if (cached) {
+    console.log("Using cached airport delays data")
+    return cached.delay_data
+  }
+
+  let retryCount = 0
+  const maxRetries = 3
+  const baseDelay = 500 // 500ms
+
+  while (retryCount < maxRetries) {
+    try {
+      // Add exponential backoff delay
+      const delayMs = baseDelay * Math.pow(2, retryCount)
+      await delay(delayMs)
+      
+      const response = await fetchFromFlightAware<AirportDelays>("/airports/delays")
+      
+      // Cache the successful response
+      writeDelaysCache(response)
+      
+      return response
+    } catch (error) {
+      retryCount++
+      if (retryCount === maxRetries) {
+        console.error(`Failed to fetch airport delays after ${maxRetries} attempts:`, error)
+        throw error
+      }
+      console.log(`Retry ${retryCount} for airport delays after ${baseDelay * Math.pow(2, retryCount)}ms delay`)
+    }
+  }
+
+  throw new Error(`Failed to fetch airport delays after ${maxRetries} attempts`)
+})
+
+/**
+ * Check if an airport has delays
+ * @param code ICAO or IATA code of the airport
+ * @returns Delay information if available, null otherwise
+ */
+export const checkAirportDelay = cache(async (code: string) => {
+  try {
+    const delaysData = await getAirportDelays()
+    return delaysData.delays.find((delay: AirportDelay) => delay.airport === code) || null
+  } catch (error) {
+    console.error(`Error checking delays for airport ${code}:`, error)
+    return null
+  }
 })
 
 /**

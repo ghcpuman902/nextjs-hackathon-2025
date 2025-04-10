@@ -29,6 +29,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.55.0",
+    "shapefile": "^0.6.6",
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.2.0",
     "tinybase": "^4.3.0",

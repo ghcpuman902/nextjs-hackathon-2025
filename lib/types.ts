@@ -1,3 +1,5 @@
+import type { AirportDetails } from "../app/actions/airport-data"
+
 export interface FlightAwareResponse {
   links: {
     next?: string
@@ -71,4 +73,33 @@ export interface FlightAirportRef {
   name: string | null
   city: string | null
   airport_info_url: string | null
+}
+
+export interface AirportDelays {
+  links: {
+    next?: string
+  }
+  num_pages: number
+  delays: Array<AirportDelay>
+}
+
+export interface AirportDelay {
+  airport: string
+  category: string
+  color: 'red' | 'yellow' | 'green'
+  delay_secs: number
+  reasons: Array<DelayReason>
+}
+
+export interface DelayReason {
+  category: string
+  color: 'red' | 'yellow' | 'green'
+  delay_secs: number
+  reason: string
+}
+
+export interface CachedAirportDetails {
+  icao_code: string
+  details: AirportDetails
+  timestamp: number
 }

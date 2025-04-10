@@ -1,59 +1,75 @@
-import { getAirportDetails } from "@/app/actions/airport-data"
-import airports from "./airports.json"
-import { readCache, writeCache, type CachedAirportDetails } from "@/lib/file-utils"
+import airports from "./busiest-airports.json"
+import WorldMap from "./WorldMap"
+import { getAirportDelays } from "../actions/airport-data"
+import type { AirportDelays } from "../../lib/types"
+
+interface Airport {
+    name: string
+    iata_code: string
+    country_code: string
+    reason: string
+    elevation: number
+    city: string
+    state: string
+    longitude: number
+    latitude: number
+    timezone: string
+    type: string
+    wiki_url: string
+    timestamp: number
+}
 
 export default async function BusiestAirportPage() {
-  // Get existing cache
-  const existingCache = readCache()
-  const processedAirports = new Set(existingCache.map(item => item.icao_code))
-  
-  // Process airports sequentially to avoid rate limiting
-  const airportDetails: CachedAirportDetails[] = [...existingCache]
-  
-  for (const airport of airports.airports) {
-    // Skip if already processed
-    if (processedAirports.has(airport.icao_code)) {
-      console.log(`Skipping already processed airport: ${airport.icao_code}`)
-      continue
-    }
-
+    // Fetch airport delay data
+    let delaysData: AirportDelays
     try {
-      console.log(`Processing airport: ${airport.icao_code}`)
-      const details = await getAirportDetails(airport.icao_code)
-      
-      const newEntry: CachedAirportDetails = {
-        icao_code: airport.icao_code,
-        details: {
-          ...airport,
-          details
-        },
-        timestamp: Date.now()
-      }
-      
-      airportDetails.push(newEntry)
-      // Update cache after each successful fetch
-      writeCache(airportDetails)
+        delaysData = await getAirportDelays()
     } catch (error) {
-      console.error(`Failed to fetch details for ${airport.icao_code}:`, error)
-      const errorEntry: CachedAirportDetails = {
-        icao_code: airport.icao_code,
-        details: {
-          ...airport,
-          details: null
-        },
-        error: error instanceof Error ? error.message : "Unknown error",
-        timestamp: Date.now()
-      }
-      airportDetails.push(errorEntry)
-      // Update cache even for errors
-      writeCache(airportDetails)
+        console.error("Failed to fetch airport delays:", error)
+        delaysData = { links: {}, num_pages: 0, delays: [] }
     }
-  }
 
-  // Output the results as JSON
-  return (
-    <pre className="whitespace-pre-wrap break-words p-4 bg-gray-100 rounded-lg">
-      {JSON.stringify(airportDetails, null, 2)}
-    </pre>
-  )
+    // Transform the airports data and include delay information
+    const airportLocations = Object.values(airports).map((airport: Airport) => {
+        // Try to find delay information for this airport
+        const airportDelay = delaysData.delays.find(
+            (delay) => delay.airport === airport.iata_code
+        )
+
+        return {
+            iata_code: airport.iata_code,
+            lat: airport.latitude,
+            lon: airport.longitude,
+            delay_status: airportDelay
+                ? {
+                    color: airportDelay.color as 'red' | 'yellow' | 'green',
+                    category: airportDelay.category,
+                    delay_secs: airportDelay.delay_secs
+                }
+                : {
+                    color: 'green' as const,
+                    category: 'no delay',
+                    delay_secs: 0
+                }
+        }
+    })
+
+
+    return (
+        <div className="container mx-auto p-4">
+
+            <div className="mb-4 p-4 relative">
+                <div className="text-2xl font-black mb-4 tracking-wide absolute top-0 left-0">World&apos;s Busiest Airports</div>
+                <WorldMap
+                    airports={airportLocations}
+                />
+            </div>
+            {/* <div className="bg-gray-100 p-4 rounded-lg">
+        <h2 className="text-xl font-semibold mb-2">Airport Data</h2>
+        <pre className="whitespace-pre-wrap break-words">
+          {JSON.stringify(delaysData, null, 2)}
+        </pre>
+      </div> */}
+        </div>
+    )
 }

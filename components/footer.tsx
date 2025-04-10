@@ -1,7 +1,7 @@
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Suspense } from "react";
 import Link from "next/link";
-import { PageMetrics } from "@/components/page-metrics";
+import { PageMetrics } from "@/components/metrics/page-metrics";
 
 export async function Footer() {
   return (

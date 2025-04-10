@@ -1,0 +1,50 @@
+[
+  {
+    "airport_code": "ALL",
+    "delay_data": {
+      "delays": [
+        {
+          "airport": "LLBG",
+          "category": "other",
+          "color": "yellow",
+          "delay_secs": 2220,
+          "reasons": [
+            {
+              "category": "other",
+              "color": "yellow",
+              "delay_secs": 2220,
+              "reason": "arrival delays for airborne aircraft an average of 37 minutes (and decreasing)"
+            }
+          ]
+        }
+      ],
+      "links": null,
+      "num_pages": 1
+    },
+    "timestamp": 1744252108061
+  },
+  {
+    "airport_code": "ALL",
+    "delay_data": {
+      "delays": [
+        {
+          "airport": "LLBG",
+          "category": "other",
+          "color": "yellow",
+          "delay_secs": 2220,
+          "reasons": [
+            {
+              "category": "other",
+              "color": "yellow",
+              "delay_secs": 2220,
+              "reason": "arrival delays for airborne aircraft an average of 37 minutes (and decreasing)"
+            }
+          ]
+        }
+      ],
+      "links": null,
+      "num_pages": 1
+    },
+    "timestamp": 1744253480093
+  }
+]

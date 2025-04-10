@@ -1,8 +1,8 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import { getFlightsById } from "@/app/actions/flight-data"
-import FlightDetail from "@/components/flight-detail"
-import FlightSearch from "@/components/flight-search"
+import FlightDetail from "@/components/flight/flight-detail"
+import FlightSearch from "@/components/flight/flight-search"
 
 // Preload flight data for this page
 export async function generateMetadata({ params }: { params: Promise<{ flightSlug?: string[] }> }) {
@@ -38,7 +38,7 @@ async function FlightDetailContent({ flightId }: { flightId: string }) {
   try {
     // This will either use the preloaded data or fetch it if not already loaded
     const flights = await getFlightsById(flightId)
-    return <FlightDetail flight={flights} />
+    return <FlightDetail flights={flights} />
   } catch (error) {
     return (
       <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded">

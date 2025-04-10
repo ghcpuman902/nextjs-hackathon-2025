@@ -1,4 +1,4 @@
-import { createStore, Row, Cell } from 'tinybase';
+import { createStore, Row } from 'tinybase';
 
 interface Metric {
   timestamp: string;
@@ -67,7 +67,7 @@ export const metricsStore = {
     return Object.values(store.getTable('metrics'))
       .sort((a, b) => (b as MetricRow).timestamp.localeCompare((a as MetricRow).timestamp))
       .map(row => {
-        const { id, metrics, connection, ...rest } = row as MetricRow;
+        const { metrics, connection, ...rest } = row as MetricRow;
         return {
           ...rest,
           metrics: JSON.parse(metrics),
@@ -80,7 +80,7 @@ export const metricsStore = {
     const metrics = Object.values(store.getTable('metrics'));
     const sorted = metrics.sort((a, b) => (b as MetricRow).timestamp.localeCompare((a as MetricRow).timestamp));
     if (sorted.length === 0) return undefined;
-    const { id, metrics: metricsStr, connection: connectionStr, ...rest } = sorted[0] as MetricRow;
+    const { metrics: metricsStr, connection: connectionStr, ...rest } = sorted[0] as MetricRow;
     return {
       ...rest,
       metrics: JSON.parse(metricsStr),
