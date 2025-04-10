@@ -1,0 +1,1315 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+We are using the latest version of nextjs (15.3), so please read the blog content:
+
+Wednesday, April 9th 2025
+# Next.js 15.3
+
+Posted by
+
+[![Andrew Clark](mdc:_next/image?url=%2Fstatic%2Fteam%2Facdlite.jpeg&w=64&q=75)](https://twitter.com/acdlite)
+
+[Andrew Clark@acdlite](mdc:https:/twitter.com/acdlite)
+
+[![Jiwon Choi](mdc:_next/image?url=%2Fstatic%2Fteam%2Fjiwon.png&w=64&q=75)](https://twitter.com/devjiwonchoi)
+
+[Jiwon Choi@devjiwonchoi](mdc:https:/twitter.com/devjiwonchoi)
+
+[![Jude Gao](mdc:_next/image?url=%2Fstatic%2Fteam%2Fjude.png&w=64&q=75)](https://twitter.com/gao_jude)
+
+[Jude Gao@gao_jude](mdc:https:/twitter.com/gao_jude)
+
+[![Maia Teegarden](mdc:_next/image?url=%2Fstatic%2Fteam%2Fmaia.jpg&w=64&q=75)](https://twitter.com/padmaia)
+
+[Maia Teegarden@padmaia](mdc:https:/twitter.com/padmaia)
+
+[![Tim Neutkens](mdc:_next/image?url=%2Fstatic%2Fteam%2Ftim.jpg&w=64&q=75)](https://twitter.com/timneutkens)
+
+[Tim Neutkens@timneutkens](mdc:https:/twitter.com/timneutkens)
+
+Next.js 15.3 includes Turbopack for builds, new client instrumentation and navigation hooks, and more:
+
+* [**Turbopack for builds (alpha)**](mdc:blog/next-15-3#turbopack-builds-alpha): Faster production builds passing 8000+ tests (99%)
+
+* [**Community support for Rspack (experimental)**](mdc:blog/next-15-3#community-support-for-rspack-experimental): Alternative bundler with Webpack compatibility
+
+* [**Client Instrumentation hook**](mdc:blog/next-15-3#client-instrumentation-hook): Early monitoring and analytics setup
+
+* [**Navigation hooks**](mdc:blog/next-15-3#navigation-hooks): Control routing with `onNavigate` and `useLinkStatus`
+
+* [**TypeScript plugin improvements**](mdc:blog/next-15-3#typescript-plugin-performance-improvements): Improved support for large codebases
+
+Upgrade today, or get started with:
+
+Terminal
+
+```
+# Use the automated upgrade CLI
+npx @next/codemod@canary upgrade latest
+ 
+# ...or upgrade manually
+npm install next@latest react@latest react-dom@latest
+ 
+# ...or start a new project
+npx create-next-app@latest
+```
+
+## [Turbopack Builds (alpha)](mdc:#turbopack-builds-alpha)
+
+Following the stable release of `next dev --turbopack`, **over 50% of development sessions** on Next.js 15 are now using Turbopack.
+
+This release includes our **alpha** release of `next build --turbopack`, bringing the same performance improvements from local development to production builds.
+
+Try Turbopack for production builds by upgrading to 15.3 and running:
+
+Terminal
+
+```
+next build --turbopack
+```
+
+### [Functionality](mdc:#functionality)
+
+[99.3%](mdc:https:/areweturboyet.com) of integration tests for `next build` are already passing. You can track our progress towards 100% at [areweturboyet.com](mdc:http:/areweturboyet.com). If your application already works with Turbopack for `dev`, then it should work as-is with `build`.
+
+Turbopack builds are in alpha. We don’t recommend using them in production for mission-critical applications at this stage. Instead, try them in a preview or staging environment, or run the build locally to observe differences in bundle size and performance.
+
+We’re actively working to close these performance gaps through scope hoisting, improved chunking, and other optimizations.
+
+### [Build performance](mdc:#build-performance)
+
+We’ve been validating Turbopack on Vercel’s large internal monorepo and early partner codebases. One advantage of Turbopack’s architecture versus our previous Webpack implementation is that performance scales when adding CPU cores:
+
+* At 4 cores: 28% faster than Webpack
+
+* At 16 cores: 60% faster than Webpack
+
+* At 30 cores: 83% faster than Webpack
+
+These build times drop even further with our experimental work on persistent caching. We will share more on that in a future release.
+
+### [Ecosystem](mdc:#ecosystem)
+
+We’re working with commonly used integrations like Sentry to make sure they’re compatible with `next build --turbopack` before the stable release. Please reach out to [@leerob on X](mdc:https:/x.com/leerob) if you are a tool author who would like to work with us to ensure compatibility.
+
+### [Feedback](mdc:#feedback)
+
+Please share your feedback, even if it goes smoothly, to help us prepare a stable release:
+
+* [GitHub discussion](mdc:https:/github.com/vercel/next.js/discussions/77721)s for general feedback
+
+* [GitHub issues](mdc:https:/github.com/vercel/next.js/issues) for reproductions
+
+## [Turbopack configuration in `next.config.ts` (stable)](mdc:#turbopack-configuration-in-nextconfigts-stable)
+
+Turbopack configuration in `next.config.ts` has moved from `experimental.turbo` to the top-level `turbopack` key:
+
+next.config.ts
+
+```
+import type { NextConfig } from 'next';
+ 
+const nextConfig: NextConfig = {
+  turbo: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
+  },
+};
+ 
+export default nextConfig;
+```
+
+For compatibility, the `experimental.turbo` option will continue to be supported until the next major release of Next.js.
+
+For a complete list of Turbopack configuration options, see the [Turbopack API Reference](mdc:https:/nextjs.org/docs/app/api-reference/config/next-config-js/turbopack).
+
+## [Community support for Rspack (experimental)](mdc:#community-support-for-rspack-experimental)
+
+The Rspack team has created a community plugin for Next.js.
+
+This provides an option for Next.js users who need near-exact Webpack API compatibility, but cannot yet move to Turbopack, to improve their local compilation and build times. We’re confident in our progress with Turbopack and will continue to provide an incremental path forward for Webpack users.
+
+While this is not an official Next.js plugin, we are partnering with the Rspack team. Both teams will collaborate on shared foundations like SWC and Lightning CSS, benefiting all Next.js users and the broader ecosystem.
+
+If you want to explore using Rspack with Next.js, you can use the `next-rspack` adapter. We are running the adapter against our integration test suite. It currently passes \~96% of tests.
+
+[View an example](mdc:https:/github.com/vercel/next.js/tree/canary/examples/with-rspack) or learn more in the [Rspack docs](mdc:https:/rspack.dev/guide/tech/next).
+
+## [Client Instrumentation Hook](mdc:#client-instrumentation-hook)
+
+The `instrumentation-client.js|ts` file allows you to add monitoring and analytics code that runs before your application's frontend code starts executing.
+
+This is ideal for setting up performance tracking, error monitoring, or other client-side observability tools as early as possible in the lifecycle.
+
+instrumentation-client.js
+
+```
+// Set up performance monitoring
+performance.mark('app-init');
+ 
+// Initialize analytics
+console.log('Analytics initialized');
+ 
+// Set up error tracking
+window.addEventListener('error', (event) => {
+  // Send to your error tracking service
+  reportError(event.error);
+});
+```
+
+Place this file at the root of your project similar to [server-side instrumentation](mdc:https:/nextjs.org/docs/app/building-your-application/optimizing/instrumentation).
+
+Learn more in the [instrumentation-client file documentation](mdc:https:/nextjs.org/docs/app/api-reference/file-conventions/instrumentation-client).
+
+## [Navigation Hooks](mdc:#navigation-hooks)
+
+We're introducing new navigation hooks that enhance client-side routing capabilities in Next.js 15.3, allowing you to more easily develop localized loading states and implement complex controls like navigation cancelation.
+
+### [`onNavigate`](mdc:#onnavigate)
+
+This event handler is a new property of the `Link` component and executes during client-side navigations, giving you precise control over your application's routing behavior.
+
+Unlike the `onClick` event, which fires for all clicks, `onNavigate` can be used for [Single-Page App (SPA)](mdc:https:/nextjs.org/docs/app/building-your-application/upgrading/single-page-applications) navigations, allowing you to execute code or even cancel navigation with `preventDefault()`.
+
+This API can be used to implement transition animations, navigation guards, or analytics tracking that should only run during actual page transitions.
+
+Learn more by visiting the [`onNavigate` documentation](mdc:https:/nextjs.org/docs/app/api-reference/components/link#onnavigate).
+
+### [`useLinkStatus`](mdc:#uselinkstatus)
+
+The `useLinkStatus` Client Component hook returns a `pending` boolean that indicates when navigation is in progress, giving you localized control over loading states.
+
+This API is modeled after [`useFormStatus`](mdc:https:/react.dev/reference/react-dom/hooks/useFormStatus) from React, and is helpful for adding custom loading indicators during page transitions, especially when prefetching is disabled or when your linked routes don't have dedicated loading states.
+
+By placing a component that uses `useLinkStatus` as a descendant of your `<Link>` component, you can create responsive UI elements that react to navigation events in real-time.
+
+Learn more by visiting the [`useLinkStatus` documentation](mdc:https:/nextjs.org/docs/app/api-reference/functions/use-link-status).
+
+## [TypeScript Plugin Performance Improvements](mdc:#typescript-plugin-performance-improvements)
+
+The Next.js TypeScript language server plugin (LSP) is now faster.
+
+The LSP provides inline Intellisense features such as server/client boundary validation, component prop hints, configuration autocompletion, and error detection for disallowed APIs in React Server Components. In very large codebases, the plugin could previously cause the TypeScript language service to hang or crash.
+
+We’ve made significant performance improvements to resolve these issues. In our internal testing, plugin response times have improved \~60% with no freezing or crashes.
+
+## [Other Changes](mdc:#other-changes)
+
+* **\[Feature\]** Support `new URL()` in `images.remotePatterns` ([#77692](mdc:https:/github.com/vercel/next.js/pull/77692))
+
+* **\[Feature\]** Viewport options are now separate from `metadata` ([#77427](mdc:https:/github.com/vercel/next.js/pull/77427))
+
+* **\[Feature\]** Add `unstable_dynamicOnHover` option ([#77866](mdc:https:/github.com/vercel/next.js/pull/77866))
+
+* **\[Feature\]** Add support for Pinterest Rich Pins ([#76988](mdc:https:/github.com/vercel/next.js/pull/76988))
+
+* **\[Improvement\]** Make revalidate work when followed by a redirect in Route Handlers ([#77090](mdc:https:/github.com/vercel/next.js/pull/77090))
+
+* **\[Improvement\]** Ensure strong consistency after calling revalidate in Server Actions ([#76885](mdc:https:/github.com/vercel/next.js/pull/76885))
+
+* **\[Improvement\]** Upgrade `sharp` for faster PNG to AVIF conversion ([#77839](mdc:https:/github.com/vercel/next.js/pull/77839))
+
+# Instrumentation
+
+Instrumentation is the process of using code to integrate monitoring and logging tools into your application. This allows you to track the performance and behavior of your application, and to debug issues in production.
+
+## [Convention](mdc:#convention)
+
+To set up instrumentation, create `instrumentation.ts|js` file in the **root directory** of your project (or inside the [`src`](mdc:docs/app/building-your-application/configuring/src-directory) folder if using one).
+
+Then, export a `register` function in the file. This function will be called **once** when a new Next.js server instance is initiated.
+
+For example, to use Next.js with [OpenTelemetry](mdc:https:/opentelemetry.io) and [@vercel/otel](mdc:https:/vercel.com/docs/observability/otel-overview):
+
+instrumentation.ts
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import { registerOTel } from '@vercel/otel'
+ 
+export function register() {
+  registerOTel('next-app')
+}
+```
+
+See the [Next.js with OpenTelemetry example](mdc:https:/github.com/vercel/next.js/tree/canary/examples/with-opentelemetry) for a complete implementation.
+
+> **Good to know**:
+>
+> * The `instrumentation` file should be in the root of your project and not inside the `app` or `pages` directory. If you're using the `src` folder, then place the file inside `src` alongside `pages` and `app`.
+>
+> * If you use the [`pageExtensions` config option](mdc:docs/app/api-reference/config/next-config-js/pageExtensions) to add a suffix, you will also need to update the `instrumentation` filename to match.
+
+## [Examples](mdc:#examples)
+
+### [Importing files with side effects](mdc:#importing-files-with-side-effects)
+
+Sometimes, it may be useful to import a file in your code because of the side effects it will cause. For example, you might import a file that defines a set of global variables, but never explicitly use the imported file in your code. You would still have access to the global variables the package has declared.
+
+We recommend importing files using JavaScript `import` syntax within your `register` function. The following example demonstrates a basic usage of `import` in a `register` function:
+
+instrumentation.ts
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+export async function register() {
+  await import('package-with-side-effect')
+}
+```
+
+> **Good to know:**
+>
+> We recommend importing the file from within the `register` function, rather than at the top of the file. By doing this, you can colocate all of your side effects in one place in your code, and avoid any unintended consequences from importing globally at the top of the file.
+
+### [Importing runtime-specific code](mdc:#importing-runtime-specific-code)
+
+Next.js calls `register` in all environments, so it's important to conditionally import any code that doesn't support specific runtimes (e.g. [Edge or Node.js](mdc:docs/app/building-your-application/rendering/edge-and-nodejs-runtimes)). You can use the `NEXT_RUNTIME` environment variable to get the current environment:
+
+instrumentation.ts
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+export async function register() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    await import('./instrumentation-node')
+  }
+ 
+  if (process.env.NEXT_RUNTIME === 'edge') {
+    await import('./instrumentation-edge')
+  }
+}
+```
+
+
+
+# instrumentation-client.js
+
+The `instrumentation-client.js|ts` file allows you to add monitoring and analytics code that runs before your application's frontend code starts executing. This is useful for setting up performance tracking, error monitoring, or any other client-side observability tools.
+
+To use it, place the file in the **root** of your application or inside a `src` folder.
+
+## [Usage](mdc:#usage)
+
+Unlike [server-side instrumentation](mdc:docs/app/building-your-application/optimizing/instrumentation), you do not need to export any specific functions. You can write your monitoring code directly in the file:
+
+instrumentation-client.ts
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+// Set up performance monitoring
+performance.mark('app-init')
+ 
+// Initialize analytics
+console.log('Analytics initialized')
+ 
+// Set up error tracking
+window.addEventListener('error', (event) => {
+  // Send to your error tracking service
+  reportError(event.error)
+})
+```
+
+## [Version History](mdc:#version-history)
+
+
+| **Version** | **Changes** |
+|---|---|
+| v15.3 | instrumentation-client introduced |
+
+
+
+
+# instrumentation.js
+
+The `instrumentation.js|ts` file is used to integrate observability tools into your application, allowing you to track the performance and behavior, and to debug issues in production.
+
+To use it, place the file in the **root** of your application or inside a [`src` folder](mdc:docs/app/building-your-application/configuring/src-directory) if using one.
+
+## [Exports](mdc:#exports)
+
+### [`register` (optional)](mdc:#register-optional)
+
+The file exports a `register` function that is called **once** when a new Next.js server instance is initiated. `register` can be an async function.
+
+instrumentation.ts
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import { registerOTel } from '@vercel/otel'
+ 
+export function register() {
+  registerOTel('next-app')
+}
+```
+
+### [`onRequestError` (optional)](mdc:#onrequesterror-optional)
+
+You can optionally export an `onRequestError` function to track **server** errors to any custom observability provider.
+
+* If you're running any async tasks in `onRequestError`, make sure they're awaited. `onRequestError` will be triggered when the Next.js server captures the error.
+
+* The `error` instance might not be the original error instance thrown, as it may be processed by React if encountered during Server Components rendering. If this happens, you can use `digest` property on an error to identify the actual error type.
+
+instrumentation.ts
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import { type Instrumentation } from 'next'
+ 
+export const onRequestError: Instrumentation.onRequestError = async (
+  err,
+  request,
+  context
+) => {
+  await fetch('https://.../report-error', {
+    method: 'POST',
+    body: JSON.stringify({
+      message: err.message,
+      request,
+      context,
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+}
+```
+
+#### [Parameters](mdc:#parameters)
+
+The function accepts three parameters: `error`, `request`, and `context`.
+
+Types
+
+```
+export function onRequestError(
+  error: { digest: string } & Error,
+  request: {
+    path: string // resource path, e.g. /blog?name=foo
+    method: string // request method. e.g. GET, POST, etc
+    headers: { [key: string]: string }
+  },
+  context: {
+    routerKind: 'Pages Router' | 'App Router' // the router type
+    routePath: string // the route file path, e.g. /app/blog/[dynamic]
+    routeType: 'render' | 'route' | 'action' | 'middleware' // the context in which the error occurred
+    renderSource:
+      | 'react-server-components'
+      | 'react-server-components-payload'
+      | 'server-rendering'
+    revalidateReason: 'on-demand' | 'stale' | undefined // undefined is a normal request without revalidation
+    renderType: 'dynamic' | 'dynamic-resume' // 'dynamic-resume' for PPR
+  }
+): void | Promise<void>
+```
+
+* `error`: The caught error itself (type is always `Error`), and a `digest` property which is the unique ID of the error.
+
+* `request`: Read-only request information associated with the error.
+
+* `context`: The context in which the error occurred. This can be the type of router (App or Pages Router), and/or (Server Components (`'render'`), Route Handlers (`'route'`), Server Actions (`'action'`), or Middleware (`'middleware'`)).
+
+### [Specifying the runtime](mdc:#specifying-the-runtime)
+
+The `instrumentation.js` file works in both the Node.js and Edge runtime, however, you can use `process.env.NEXT_RUNTIME` to target a specific runtime.
+
+instrumentation.js
+
+```
+export function register() {
+  if (process.env.NEXT_RUNTIME === 'edge') {
+    return require('./register.edge')
+  } else {
+    return require('./register.node')
+  }
+}
+ 
+export function onRequestError() {
+  if (process.env.NEXT_RUNTIME === 'edge') {
+    return require('./on-request-error.edge')
+  } else {
+    return require('./on-request-error.node')
+  }
+}
+```
+
+## [Version History](mdc:#version-history)
+
+
+| **Version** | **Changes** |
+|---|---|
+| v15.0.0 | onRequestError introduced, instrumentation stable |
+| v14.0.4 | Turbopack support for instrumentation |
+| v13.2.0 | instrumentation introduced as an experimental feature |
+
+
+# Link
+
+`<Link>` is a React component that extends the HTML `<a>` element to provide [prefetching](mdc:docs/app/building-your-application/routing/linking-and-navigating#2-prefetching) and client-side navigation between routes. It is the primary way to navigate between routes in Next.js.
+
+Basic usage:
+
+app/page.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import Link from 'next/link'
+ 
+export default function Page() {
+  return <Link href="/dashboard">Dashboard</Link>
+}
+```
+
+## [Reference](mdc:#reference)
+
+The following props can be passed to the `<Link>` component:
+
+
+| **Prop** | **Example** | **Type** | **Required** |
+|---|---|---|---|
+| href | href="/dashboard" | String or Object | Yes |
+| replace | replace={false} | Boolean | - |
+| scroll | scroll={false} | Boolean | - |
+| prefetch | prefetch={false} | Boolean or null | - |
+| onNavigate | onNavigate={(e) => {}} | Function | - |
+
+> **Good to know**: `<a>` tag attributes such as `className` or `target="_blank"` can be added to `<Link>` as props and will be passed to the underlying `<a>` element.
+
+### [`href` (required)](mdc:#href-required)
+
+The path or URL to navigate to.
+
+app/page.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import Link from 'next/link'
+ 
+// Navigate to /about?name=test
+export default function Page() {
+  return (
+    <Link
+      href={{
+        pathname: '/about',
+        query: { name: 'test' },
+      }}
+    >
+      About
+    </Link>
+  )
+}
+```
+
+### [`replace`](mdc:#replace)
+
+**Defaults to `false`.** When `true`, `next/link` will replace the current history state instead of adding a new URL into the [browser's history](mdc:https:/developer.mozilla.org/docs/Web/API/History_API) stack.
+
+app/page.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import Link from 'next/link'
+ 
+export default function Page() {
+  return (
+    <Link href="/dashboard" replace>
+      Dashboard
+    </Link>
+  )
+}
+```
+
+### [`scroll`](mdc:#scroll)
+
+**Defaults to `true`.** The default scrolling behavior of `<Link>` in Next.js **is to maintain scroll position**, similar to how browsers handle back and forwards navigation. When you navigate to a new [Page](mdc:docs/app/api-reference/file-conventions/page), scroll position will stay the same as long as the Page is visible in the viewport. However, if the Page is not visible in the viewport, Next.js will scroll to the top of the first Page element.
+
+When `scroll = {false}`, Next.js will not attempt to scroll to the first Page element.
+
+> **Good to know**: Next.js checks if `scroll: false` before managing scroll behavior. If scrolling is enabled, it identifies the relevant DOM node for navigation and inspects each top-level element. All non-scrollable elements and those without rendered HTML are bypassed, this includes sticky or fixed positioned elements, and non-visible elements such as those calculated with `getBoundingClientRect`. Next.js then continues through siblings until it identifies a scrollable element that is visible in the viewport.
+
+app/page.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import Link from 'next/link'
+ 
+export default function Page() {
+  return (
+    <Link href="/dashboard" scroll={false}>
+      Dashboard
+    </Link>
+  )
+}
+```
+
+### [`prefetch`](mdc:#prefetch)
+
+Prefetching happens when a `<Link />` component enters the user's viewport (initially or through scroll). Next.js prefetches and loads the linked route (denoted by the `href`) and its data in the background to improve the performance of client-side navigations. If the prefetched data has expired by the time the user hovers over a `<Link />`, Next.js will attempt to prefetch it again. **Prefetching is only enabled in production**.
+
+The following values can be passed to the `prefetch` prop:
+
+* **`null` (default)**: Prefetch behavior depends on whether the route is static or dynamic. For static routes, the full route will be prefetched (including all its data). For dynamic routes, the partial route down to the nearest segment with a [`loading.js`](mdc:docs/app/building-your-application/routing/loading-ui-and-streaming#instant-loading-states) boundary will be prefetched.
+
+* `true`: The full route will be prefetched for both static and dynamic routes.
+
+* `false`: Prefetching will never happen both on entering the viewport and on hover.
+
+app/page.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import Link from 'next/link'
+ 
+export default function Page() {
+  return (
+    <Link href="/dashboard" prefetch={false}>
+      Dashboard
+    </Link>
+  )
+}
+```
+
+### [`onNavigate`](mdc:#onnavigate)
+
+An event handler called during client-side navigation. The handler receives an event object that includes a `preventDefault()` method, allowing you to cancel the navigation if needed.
+
+app/page.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import Link from 'next/link'
+ 
+export default function Page() {
+  return (
+    <Link
+      href="/dashboard"
+      onNavigate={(e) => {
+        // Only executes during SPA navigation
+        console.log('Navigating...')
+ 
+        // Optionally prevent navigation
+        // e.preventDefault()
+      }}
+    >
+      Dashboard
+    </Link>
+  )
+}
+```
+
+> **Good to know**: While `onClick` and `onNavigate` may seem similar, they serve different purposes. `onClick` executes for all click events, while `onNavigate` only runs during client-side navigation. Some key differences:
+>
+> * When using modifier keys (`Ctrl`/`Cmd` + Click), `onClick` executes but `onNavigate` doesn't since Next.js prevents default navigation for new tabs.
+>
+> * External URLs won't trigger `onNavigate` since it's only for client-side and same-origin navigations.
+>
+> * Links with the `download` attribute will work with `onClick` but not `onNavigate` since the browser will treat the linked URL as a download.
+
+## [Examples](mdc:#examples)
+
+The following examples demonstrate how to use the `<Link>` component in different scenarios.
+
+### [Linking to dynamic segments](mdc:#linking-to-dynamic-segments)
+
+When linking to [dynamic segments](mdc:docs/app/building-your-application/routing/dynamic-routes), you can use [template literals and interpolation](mdc:https:/developer.mozilla.org/docs/Web/JavaScript/Reference/Template_literals) to generate a list of links. For example, to generate a list of blog posts:
+
+app/blog/post-list.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import Link from 'next/link'
+ 
+interface Post {
+  id: number
+  title: string
+  slug: string
+}
+ 
+export default function PostList({ posts }: { posts: Post[] }) {
+  return (
+    <ul>
+      {posts.map((post) => (
+        <li key={post.id}>
+          <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+        </li>
+      ))}
+    </ul>
+  )
+}
+```
+
+### [Checking active links](mdc:#checking-active-links)
+
+You can use [`usePathname()`](mdc:docs/app/api-reference/functions/use-pathname) to determine if a link is active. For example, to add a class to the active link, you can check if the current `pathname` matches the `href` of the link:
+
+app/ui/nav-links.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+'use client'
+ 
+import { usePathname } from 'next/navigation'
+import Link from 'next/link'
+ 
+export function Links() {
+  const pathname = usePathname()
+ 
+  return (
+    <nav>
+      <Link className={`link ${pathname === '/' ? 'active' : ''}`} href="/">
+        Home
+      </Link>
+ 
+      <Link
+        className={`link ${pathname === '/about' ? 'active' : ''}`}
+        href="/about"
+      >
+        About
+      </Link>
+    </nav>
+  )
+}
+```
+
+### [Scrolling to an `id`](mdc:#scrolling-to-an-id)
+
+If you'd like to scroll to a specific `id` on navigation, you can append your URL with a `#` hash link or just pass a hash link to the `href` prop. This is possible since `<Link>` renders to an `<a>` element.
+
+```
+<Link href="/dashboard#settings">Settings</Link>
+ 
+// Output
+<a href="/dashboard#settings">Settings</a>
+```
+
+> **Good to know**:
+>
+> * Next.js will scroll to the [Page](mdc:docs/app/api-reference/file-conventions/page) if it is not visible in the viewport upon navigation.
+
+### [Linking to dynamic route segments](mdc:#linking-to-dynamic-route-segments)
+
+For [dynamic route segments](mdc:docs/app/building-your-application/routing/dynamic-routes), it can be handy to use template literals to create the link's path.
+
+For example, you can generate a list of links to the dynamic route `app/blog/[slug]/page.js`:
+
+app/blog/page.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import Link from 'next/link'
+ 
+export default function Page({ posts }) {
+  return (
+    <ul>
+      {posts.map((post) => (
+        <li key={post.id}>
+          <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+        </li>
+      ))}
+    </ul>
+  )
+}
+```
+
+### [If the child is a custom component that wraps an `<a>` tag](mdc:#if-the-child-is-a-custom-component-that-wraps-an-a-tag)
+
+If the child of `Link` is a custom component that wraps an `<a>` tag, you must add `passHref` to `Link`. This is necessary if you’re using libraries like [styled-components](mdc:https:/styled-components.com). Without this, the `<a>` tag will not have the `href` attribute, which hurts your site's accessibility and might affect SEO. If you're using [ESLint](mdc:docs/pages/api-reference/config/eslint), there is a built-in rule `next/link-passhref` to ensure correct usage of `passHref`.
+
+components/nav-link.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import Link from 'next/link'
+import styled from 'styled-components'
+ 
+// This creates a custom component that wraps an <a> tag
+const RedLink = styled.a`
+  color: red;
+`
+ 
+function NavLink({ href, name }) {
+  return (
+    <Link href={href} passHref legacyBehavior>
+      <RedLink>{name}</RedLink>
+    </Link>
+  )
+}
+ 
+export default NavLink
+```
+
+* If you’re using [emotion](mdc:https:/emotion.sh)’s JSX pragma feature (`@jsx jsx`), you must use `passHref` even if you use an `<a>` tag directly.
+
+* The component should support `onClick` property to trigger navigation correctly.
+
+### [Nesting a functional component](mdc:#nesting-a-functional-component)
+
+If the child of `Link` is a functional component, in addition to using `passHref` and `legacyBehavior`, you must wrap the component in [`React.forwardRef`](mdc:https:/react.dev/reference/react/forwardRef):
+
+app/page.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import Link from 'next/link'
+import React from 'react'
+ 
+// Define the props type for MyButton
+interface MyButtonProps {
+  onClick?: React.MouseEventHandler<HTMLAnchorElement>
+  href?: string
+}
+ 
+// Use React.ForwardRefRenderFunction to properly type the forwarded ref
+const MyButton: React.ForwardRefRenderFunction<
+  HTMLAnchorElement,
+  MyButtonProps
+> = ({ onClick, href }, ref) => {
+  return (
+    <a href={href} onClick={onClick} ref={ref}>
+      Click Me
+    </a>
+  )
+}
+ 
+// Use React.forwardRef to wrap the component
+const ForwardedMyButton = React.forwardRef(MyButton)
+ 
+export default function Page() {
+  return (
+    <Link href="/about" passHref legacyBehavior>
+      <ForwardedMyButton />
+    </Link>
+  )
+}
+```
+
+### [Replace the URL instead of push](mdc:#replace-the-url-instead-of-push)
+
+The default behavior of the `Link` component is to `push` a new URL into the `history` stack. You can use the `replace` prop to prevent adding a new entry, as in the following example:
+
+app/page.js
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import Link from 'next/link'
+ 
+export default function Page() {
+  return (
+    <Link href="/about" replace>
+      About us
+    </Link>
+  )
+}
+```
+
+### [Disable scrolling to the top of the page](mdc:#disable-scrolling-to-the-top-of-the-page)
+
+The default scrolling behavior of `<Link>` in Next.js **is to maintain scroll position**, similar to how browsers handle back and forwards navigation. When you navigate to a new [Page](mdc:docs/app/api-reference/file-conventions/page), scroll position will stay the same as long as the Page is visible in the viewport.
+
+However, if the Page is not visible in the viewport, Next.js will scroll to the top of the first Page element. If you'd like to disable this behavior, you can pass `scroll={false}` to the `<Link>` component, or `scroll: false` to `router.push()` or `router.replace()`.
+
+app/page.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import Link from 'next/link'
+ 
+export default function Page() {
+  return (
+    <Link href="/#hashid" scroll={false}>
+      Disables scrolling to the top
+    </Link>
+  )
+}
+```
+
+Using `router.push()` or `router.replace()`:
+
+```
+// useRouter
+import { useRouter } from 'next/navigation'
+ 
+const router = useRouter()
+ 
+router.push('/dashboard', { scroll: false })
+```
+
+### [Prefetching links in Middleware](mdc:#prefetching-links-in-middleware)
+
+It's common to use [Middleware](mdc:docs/app/building-your-application/routing/middleware) for authentication or other purposes that involve rewriting the user to a different page. In order for the `<Link />` component to properly prefetch links with rewrites via Middleware, you need to tell Next.js both the URL to display and the URL to prefetch. This is required to avoid un-necessary fetches to middleware to know the correct route to prefetch.
+
+For example, if you want to serve a `/dashboard` route that has authenticated and visitor views, you can add the following in your Middleware to redirect the user to the correct page:
+
+middleware.ts
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import { NextResponse } from 'next/server'
+ 
+export function middleware(request: Request) {
+  const nextUrl = request.nextUrl
+  if (nextUrl.pathname === '/dashboard') {
+    if (request.cookies.authToken) {
+      return NextResponse.rewrite(new URL('/auth/dashboard', request.url))
+    } else {
+      return NextResponse.rewrite(new URL('/public/dashboard', request.url))
+    }
+  }
+}
+```
+
+In this case, you would want to use the following code in your `<Link />` component:
+
+app/page.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+'use client'
+ 
+import Link from 'next/link'
+import useIsAuthed from './hooks/useIsAuthed' // Your auth hook
+ 
+export default function Page() {
+  const isAuthed = useIsAuthed()
+  const path = isAuthed ? '/auth/dashboard' : '/public/dashboard'
+  return (
+    <Link as="/dashboard" href={path}>
+      Dashboard
+    </Link>
+  )
+}
+```
+
+### [Blocking navigation](mdc:#blocking-navigation)
+
+You can use the `onNavigate` prop to block navigation when certain conditions are met, such as when a form has unsaved changes. When you need to block navigation across multiple components in your app (like preventing navigation from any link while a form is being edited), React Context provides a clean way to share this blocking state. First, create a context to track the navigation blocking state:
+
+app/contexts/navigation-blocker.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+'use client'
+ 
+import { createContext, useState, useContext } from 'react'
+ 
+interface NavigationBlockerContextType {
+  isBlocked: boolean
+  setIsBlocked: (isBlocked: boolean) => void
+}
+ 
+export const NavigationBlockerContext =
+  createContext<NavigationBlockerContextType>({
+    isBlocked: false,
+    setIsBlocked: () => {},
+  })
+ 
+export function NavigationBlockerProvider({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const [isBlocked, setIsBlocked] = useState(false)
+ 
+  return (
+    <NavigationBlockerContext.Provider value={{ isBlocked, setIsBlocked }}>
+      {children}
+    </NavigationBlockerContext.Provider>
+  )
+}
+ 
+export function useNavigationBlocker() {
+  return useContext(NavigationBlockerContext)
+}
+```
+
+Create a form component that uses the context:
+
+app/components/form.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+'use client'
+ 
+import { useNavigationBlocker } from '../contexts/navigation-blocker'
+ 
+export default function Form() {
+  const { setIsBlocked } = useNavigationBlocker()
+ 
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        setIsBlocked(false)
+      }}
+      onChange={() => setIsBlocked(true)}
+    >
+      <input type="text" name="name" />
+      <button type="submit">Save</button>
+    </form>
+  )
+}
+```
+
+Create a custom Link component that blocks navigation:
+
+app/components/custom-link.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+'use client'
+ 
+import Link from 'next/link'
+import { useNavigationBlocker } from '../contexts/navigation-blocker'
+ 
+interface CustomLinkProps extends React.ComponentProps<typeof Link> {
+  children: React.ReactNode
+}
+ 
+export function CustomLink({ children, ...props }: CustomLinkProps) {
+  const { isBlocked } = useNavigationBlocker()
+ 
+  return (
+    <Link
+      onNavigate={(e) => {
+        if (
+          isBlocked &&
+          !window.confirm('You have unsaved changes. Leave anyway?')
+        ) {
+          e.preventDefault()
+        }
+      }}
+      {...props}
+    >
+      {children}
+    </Link>
+  )
+}
+```
+
+Create a navigation component:
+
+app/components/nav.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+'use client'
+ 
+import { CustomLink as Link } from './custom-link'
+ 
+export default function Nav() {
+  return (
+    <nav>
+      <Link href="/">Home</Link>
+      <Link href="/about">About</Link>
+    </nav>
+  )
+}
+```
+
+Finally, wrap your app with the `NavigationBlockerProvider` in the root layout and use the components in your page:
+
+app/layout.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import { NavigationBlockerProvider } from './contexts/navigation-blocker'
+ 
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <NavigationBlockerProvider>{children}</NavigationBlockerProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+Then, use the `Nav` and `Form` components in your page:
+
+app/page.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import Nav from './components/nav'
+import Form from './components/form'
+ 
+export default function Page() {
+  return (
+    <div>
+      <Nav />
+      <main>
+        <h1>Welcome to the Dashboard</h1>
+        <Form />
+      </main>
+    </div>
+  )
+}
+```
+
+When a user tries to navigate away using `CustomLink` while the form has unsaved changes, they'll be prompted to confirm before leaving.
+
+## [Version history](mdc:#version-history)
+
+
+| **Version** | **Changes** |
+|---|---|
+| v15.3.0 | Add onNavigate API |
+| v13.0.0 | No longer requires a child <a> tag. A codemod is provided to automatically update your codebase. |
+| v10.0.0 | href props pointing to a dynamic route are automatically resolved and no longer require an as prop. |
+| v8.0.0 | Improved prefetching performance. |
+| v1.0.0 | next/link introduced. |
+
+
+# useLinkStatus
+
+`useLinkStatus` is a **Client Component** hook that lets you track the loading state of a `Link` component during navigation. It can be used to show loading indicators during page transitions, especially when [prefetching](mdc:docs/app/building-your-application/routing/linking-and-navigating#2-prefetching) is disabled, or the linked route does not have any loading states.
+
+app/loading-indicator.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+'use client'
+ 
+import { useLinkStatus } from 'next/link'
+ 
+export default function LoadingIndicator() {
+  const { pending } = useLinkStatus()
+  return pending ? <span>⌛</span> : null
+}
+```
+
+app/header.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import Link from 'next/link'
+import LoadingIndicator from './loading-indicator'
+ 
+export default function Header() {
+  return (
+    <header>
+      <Link href="/dashboard" prefetch={false}>
+        Dashboard <LoadingIndicator />
+      </Link>
+    </header>
+  )
+}
+```
+
+> **Good to know**:
+>
+> * `useLinkStatus` must be used within a descendant component of a `Link` component
+>
+> * The hook is most useful when `prefetch={false}` is set on the `Link` component
+>
+> * If the linked route has been prefetched, the pending state will be skipped
+>
+> * When clicking multiple links in quick succession, only the last link's pending state is shown
+>
+> * This hook is not supported in the Pages Router and will always return `{ pending: false }`
+
+## [Parameters](mdc:#parameters)
+
+```
+const { pending } = useLinkStatus()
+```
+
+`useLinkStatus` does not take any parameters.
+
+## [Returns](mdc:#returns)
+
+`useLinkStatus` returns an object with a single property:
+
+
+| **Property** | **Type** | **Description** |
+|---|---|---|
+| pending | boolean | true before history updates, false after |
+
+## [Examples](mdc:#examples)
+
+### [Improving the user experience when navigating with new query parameters](mdc:#improving-the-user-experience-when-navigating-with-new-query-parameters)
+
+In this example, navigating between categories updates the query string (e.g. ?category=books). However, the page may appear unresponsive because the `<PageSkeleton />` fallback won't replace the existing content (see [preventing unwanted loading indicators](mdc:https:/react.dev/reference/react/useTransition#preventing-unwanted-loading-indicators)).
+
+You can use the `useLinkStatus` hook to render a lightweight loading indicator next to the active link and provide immediate feedback to the user while the data is being fetched.
+
+app/components/loading-indicator.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+'use client'
+ 
+import { useLinkStatus } from 'next/link'
+ 
+export default function LoadingIndicator() {
+  const { pending } = useLinkStatus()
+  return pending ? <span>⌛</span> : null
+}
+```
+
+app/page.tsx
+
+TypeScript
+
+JavaScriptTypeScript
+
+```
+import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import { Suspense } from 'react'
+import LoadingIndicator from './loading-indicator'
+ 
+function MenuBar() {
+  return (
+    <div>
+      <Link href="?category=electronics">
+        Electronics <LoadingIndicator />
+      </Link>
+      <Link href="?category=clothing">
+        Clothing <LoadingIndicator />
+      </Link>
+      <Link href="?category=books">
+        Books <LoadingIndicator />
+      </Link>
+    </div>
+  )
+}
+ 
+async function ProductList({ category }: { category: string }) {
+  const products = await fetchProducts(category)
+ 
+  return (
+    <ul>
+      {products.map((product) => (
+        <li key={product}>{product}</li>
+      ))}
+    </ul>
+  )
+}
+ 
+export default async function ProductCategories({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    category: string
+  }>
+}) {
+  const { category } = await searchParams
+ 
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <MenuBar />
+      <ProductList category={category} />
+    </Suspense>
+  )
+}
+```
+
+
+| **Version** | **Changes** |
+|---|---|
+| v15.3.0 | useLinkStatus introduced. |
+
+

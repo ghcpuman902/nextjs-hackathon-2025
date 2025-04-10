@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Package rules
+
+- we are using pnpm.
+- try not to install too much package and do things natively if you can.
+- use a newer npm package 
+- never ask user to brew install anything
+- shadcn install command is pnpm dlx shadcn@latest add component1 component2 component3
