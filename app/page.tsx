@@ -28,7 +28,7 @@ export default function Home() {
           </ul>
 
           <div className="mb-6">
-            <FlightSearch />
+            <FlightSearch flightId="DAL2267" />
           </div>
         </div>
 

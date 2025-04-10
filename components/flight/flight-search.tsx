@@ -5,8 +5,8 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
-export default function FlightSearch() {
-  const [flightNumber, setFlightNumber] = useState("DAL2267")
+export default function FlightSearch({ flightId }: { flightId: string }) {
+  const [flightNumber, setFlightNumber] = useState(flightId || "DAL2267")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
 

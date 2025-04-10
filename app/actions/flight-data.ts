@@ -49,7 +49,7 @@ export const getFlightsById = cache(async (flightId: string) => {
     if (response.flights && response.flights.length > 0) {
       return response.flights
     }
-    throw new Error(`No flights found with ID ${flightId}`)
+    return []
   } catch (error) {
     console.error("Error in getFlightsById:", error)
     throw error
