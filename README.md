@@ -67,14 +67,29 @@ FLIGHTAWARE_API_KEY=your_key_here
 
 ---
 
-### 3. How to Get a FlightAware API Key
+### 3. How to Obtain a FlightAware API Key
 
-1. Go to the FlightAware AeroAPI portal:  
-   https://www.flightaware.com/aeroapi/portal/#overview
-2. Click **Sign Up** in the top right (create an account)
-3. After registration and approval, return to the same link  
-4. Go to the **"API Keys"** section in the AeroAPI portal and create a new key  
-5. Use that key in your `.env.local` file
+1. Navigate to the FlightAware AeroAPI portal:  
+   [FlightAware AeroAPI Signup](https://www.flightaware.com/aeroapi/signup/personal)
+2. Click on **Sign Up** located in the top right corner to create an account.
+3. Once your registration is approved, return to the [AeroAPI Overview](https://www.flightaware.com/aeroapi/portal/#overview).
+4. Access the **"API Keys"** section within the AeroAPI portal and generate a new key.
+5. Insert that key into your `.env.local` file.
+
+---
+
+### 4. How to Run the Project
+
+Install dependencies:
+
+```bash
+pnpm i 
+```
+
+Run the project locally as development:
+```bash
+pnpm run dev
+```
 
 ---
 
