@@ -59,7 +59,7 @@ pnpm install
 
 ### 2. Set up environment variables
 
-Copy the `.env.example` file and rename it to `.env.local`, then add your FlightAware credentials (see below):
+Create a `.env.local` file and add your FlightAware credentials (see below):
 
 ```
 FLIGHTAWARE_API_KEY=your_key_here
@@ -82,18 +82,19 @@ FLIGHTAWARE_API_KEY=your_key_here
 
 ```
 /app
-  /flight/[id]        → Flight-specific stats
-  /route/[a-b]        → Route comparison
-  /airport/[code]     → Airport-level delays
-  /dashboard          → Treemap/heatmap UI
-  /api                → Server Actions + wrapper logic
+  /flight/[[...flightSlug]]        → Flight-specific stats
+  /route/[[...routeSlug]]          → Route comparison
+  /airport/[[...airportSlug]]      → Airport-level delays
+  /dashboard                       → Landing page
+  /actions                         → Server Actions + wrapper logic
+  /api/og                          → Open Graph image generation
+  /api/metrics                     → Metrics API
 
 /lib
-  flightaware.ts      → AeroAPI client wrapper
-  cache.ts            → Neon/Upstash logic
+  fetch.ts                         → AeroAPI fetch wrapper
+  metric-store.ts                  → Metric storage with tinybase, will change to remote db later
 
-/public
-  placeholder UI assets or visuals
+
 ```
 
 ---
