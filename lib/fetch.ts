@@ -1,7 +1,19 @@
 /**
  * Utility function to fetch data from FlightAware API
  */
+import mockData from "./mock-data.json"
+async function returnMockDataWithDelay<T>(): Promise<T> {
+  await new Promise((resolve) => setTimeout(resolve, 1000))
+  return mockData as T
+}
+
 export async function fetchFromFlightAware<T>(endpoint: string): Promise<T> {
+  const useMockData = true
+
+  if (useMockData) {
+    return returnMockDataWithDelay<T>()
+  }
+
   const API_BASE_URL = "https://aeroapi.flightaware.com/aeroapi"
   const API_KEY = process.env.FLIGHTAWARE_API_KEY
 

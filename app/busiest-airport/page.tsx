@@ -20,24 +20,33 @@ interface Airport {
 }
 
 export default async function BusiestAirportPage() {
-    // Fetch airport delay data
-    let delaysData: AirportDelays
+    // Initialize with default value
+    let delaysData: AirportDelays = {
+        links: {},
+        num_pages: 0,
+        delays: []
+    }
+
     try {
-        delaysData = await getAirportDelays()
+        const response = await getAirportDelays()
+        // Only update if we got valid data
+        if (response && Array.isArray(response.delays)) {
+            delaysData = response
+        }
     } catch (error) {
         console.error("Failed to fetch airport delays:", error)
-        delaysData = { links: {}, num_pages: 0, delays: [] }
     }
 
     // Transform the airports data and include delay information
-    const airportLocations = Object.values(airports).map((airport: Airport) => {
+    const airportLocations = Object.entries(airports).map(([icao, airport]: [string, Airport]) => {
         // Try to find delay information for this airport
-        const airportDelay = delaysData.delays.find(
+        const airportDelay = delaysData.delays?.find(
             (delay) => delay.airport === airport.iata_code
         )
-
+        
         return {
             iata_code: airport.iata_code,
+            icao_code: icao, // Using the key as the ICAO code
             lat: airport.latitude,
             lon: airport.longitude,
             delay_status: airportDelay
@@ -54,22 +63,20 @@ export default async function BusiestAirportPage() {
         }
     })
 
-
     return (
         <div className="container mx-auto p-4">
-
             <div className="mb-4 p-4 relative">
-                <div className="text-2xl font-black mb-4 tracking-wide absolute top-0 left-0">World&apos;s Busiest Airports</div>
+                <div className="text-base lg:text-2xl font-black mb-4 tracking-wide absolute top-0 left-0">World&apos;s Busiest Routes</div>
                 <WorldMap
                     airports={airportLocations}
                 />
             </div>
-            {/* <div className="bg-gray-100 p-4 rounded-lg">
-        <h2 className="text-xl font-semibold mb-2">Airport Data</h2>
-        <pre className="whitespace-pre-wrap break-words">
-          {JSON.stringify(delaysData, null, 2)}
-        </pre>
-      </div> */}
+            {/* <div className="bg-muted text-muted-foreground p-4 rounded-lg">
+                <h2 className="text-xl font-semibold mb-2">Airport Data</h2>
+                <pre className="whitespace-pre-wrap break-words">
+                    {JSON.stringify(airportLocations.map((airport) => airport.icao_code), null, 2)}
+                </pre>
+            </div> */}
         </div>
     )
 }

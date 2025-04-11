@@ -1,0 +1,48 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Metric {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  path      String
+  userAgent String
+  metrics   MetricData @relation(fields: [metricDataId], references: [id])
+  metricDataId String @unique
+  connection ConnectionData? @relation(fields: [connectionDataId], references: [id])
+  connectionDataId String? @unique
+}
+
+model MetricData {
+  id        String   @id @default(uuid())
+  CLS       Float?
+  FCP       Float?
+  INP       Float?
+  LCP       Float?
+  TTFB      Float?
+  navigationTiming NavigationTiming @relation(fields: [navigationTimingId], references: [id])
+  navigationTimingId String @unique
+  metric    Metric?
+}
+
+model NavigationTiming {
+  id                      String   @id @default(uuid())
+  domComplete             Float?
+  domInteractive          Float?
+  domContentLoadedEventEnd Float?
+  loadEventEnd            Float?
+  metricData             MetricData?
+}
+
+model ConnectionData {
+  id            String   @id @default(uuid())
+  effectiveType String?
+  rtt           Float?
+  downlink      Float?
+  metric        Metric?
+}

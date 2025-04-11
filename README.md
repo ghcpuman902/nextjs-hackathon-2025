@@ -19,7 +19,7 @@ We want to help **before** you book, by showing:
 ## 🔥 Key Features
 
 - Flight/route/airport lookup with summarised delay stats  
-- Clean UI showing “delay risk” levels  
+- Clean UI showing "delay risk" levels  
 - Treemap/heatmap-style dashboard view for visual insight  
 - Streaming data & low round-trips using Next.js 15 features  
 - Open-source and deployable on Vercel  
@@ -30,9 +30,19 @@ We want to help **before** you book, by showing:
 
 - **Next.js 15 (App Router + Server Actions)**  
 - **Tailwind CSS v4**  
-- **Neon** for caching and persisted query results  
+- **Prisma** with PostgreSQL for metrics storage
 - **Upstash** for rate-limiting and async coordination  
 - **FlightAware AeroAPI** as primary data source  
+
+---
+
+## 🗺️ Map Data
+
+- World map outlines from [Natural Earth Data](https://www.naturalearthdata.com/downloads/110m-physical-vectors/)
+- Converted to Mollweide projection for equal-area visualization using mapshaper:
+  ```bash
+  mapshaper ne_110m_land.shp -proj moll -o format=geojson mollweide.geo.json
+  ```
 
 ---
 
@@ -52,44 +62,45 @@ We want to help **before** you book, by showing:
 ```bash
 git clone https://github.com/ghcpuman902/nextjs-hackathon-2025.git ./flight-delay-insight
 cd flight-delay-insight
+```
+
+### 2. Install dependencies
+
+```bash
 pnpm install
 ```
 
----
+### 3. Set up environment variables
 
-### 2. Set up environment variables
+Create a `.env.local` file in the root directory with the following variables:
 
-Create a `.env.local` file and add your FlightAware credentials (see below):
+```env
+# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/flight_delay_insight"
 
-```
+# API Keys
 FLIGHTAWARE_API_KEY=your_key_here
 ```
 
----
+### 4. Set up the database
 
-### 3. How to Obtain a FlightAware API Key
-
-1. Navigate to the FlightAware AeroAPI portal:  
-   [FlightAware AeroAPI Signup](https://www.flightaware.com/aeroapi/signup/personal)
-2. Click on **Sign Up** located in the top right corner to create an account.
-3. Once your registration is approved, return to the [AeroAPI Overview](https://www.flightaware.com/aeroapi/portal/#overview).
-4. Access the **"API Keys"** section within the AeroAPI portal and generate a new key.
-5. Insert that key into your `.env.local` file.
-
----
-
-### 4. How to Run the Project
-
-Install dependencies:
-
+1. Make sure you have PostgreSQL installed and running locally
+2. Create a new database:
 ```bash
-pnpm i 
+createdb flight_delay_insight
+```
+3. Run database migrations:
+```bash
+pnpm prisma migrate dev
 ```
 
-Run the project locally as development:
+### 5. Start the development server
+
 ```bash
 pnpm run dev
 ```
+
+The app will be available at `http://localhost:3000`
 
 ---
 
@@ -107,9 +118,10 @@ pnpm run dev
 
 /lib
   fetch.ts                         → AeroAPI fetch wrapper
-  metric-store.ts                  → Metric storage with tinybase, will change to remote db later
+  metric-store.ts                  → Metric storage with Prisma
 
-
+/prisma
+  schema.prisma                    → Database schema
 ```
 
 ---

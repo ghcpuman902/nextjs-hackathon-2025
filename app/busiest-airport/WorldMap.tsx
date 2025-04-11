@@ -1,14 +1,14 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-
-// Import Mollweide GeoJSON directly
-import geoJsonData from '@/public/ne_110m_land/mollweide.geo.json'
+import { useEffect, useRef, useState } from 'react'
+import geoJsonData from './mollweide.geo.json'
+import routesData from './routes.json'
+import './WorldMap.css'
 
 interface Airport {
   lat: number
   lon: number
-  iata_code: string
+  icao_code: string
   delay_status?: {
     color: 'red' | 'yellow' | 'green'
     category: string
@@ -18,13 +18,7 @@ interface Airport {
 
 interface WorldMapProps {
   airports: Airport[]
-  width?: number
-  height?: number
-  backgroundColor?: string
-  landOutlineColor?: string
-  landFillColor?: string
-  airportColor?: string
-  gridLines?: boolean
+  className?: string
 }
 
 // GeoJSON types
@@ -76,276 +70,407 @@ const calculateBounds = () => {
 // Precompute bounds outside component - it's static data
 const BOUNDS = calculateBounds()
 
+// Convert lat/lon to Mollweide projection coordinates
+const latLonToProjected = (lat: number, lon: number, centralMeridian = 0): [number, number] => {
+  const latRad = (lat * Math.PI) / 180
+  const lonRad = ((lon - centralMeridian) * Math.PI) / 180
+  
+  if (Math.abs(lat) === 90) {
+    const theta = lat > 0 ? Math.PI / 2 : -Math.PI / 2
+    const x = 0
+    const y = Math.sqrt(2) * Math.sin(theta)
+    return [x, y]
+  }
+  
+  let theta = latRad
+  const MAX_ITERATIONS = 10
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
+    theta = theta - (2 * theta + Math.sin(2 * theta) - Math.PI * Math.sin(latRad)) / 
+            (4 * Math.cos(theta) * Math.cos(theta))
+  }
+  
+  const x = (2 * Math.sqrt(2) / Math.PI) * lonRad * Math.cos(theta)
+  const y = Math.sqrt(2) * Math.sin(theta)
+  
+  return [x, y]
+}
+
+// Helper to draw a great circle line between two points in the Mollweide projection
+const drawGreatCircleLine = (
+  start: Airport,
+  end: Airport,
+  segments = 100
+): [number, number][] => {
+  const points: [number, number][] = []
+
+  // Convert degrees to radians
+  const startLat = (start.lat * Math.PI) / 180
+  const startLon = (start.lon * Math.PI) / 180
+  const endLat = (end.lat * Math.PI) / 180
+  const endLon = (end.lon * Math.PI) / 180
+
+  // Generate points along the great circle
+  for (let i = 0; i <= segments; i++) {
+    const fraction = i / segments
+    
+    // Interpolate along the great circle
+    const A = Math.sin((1 - fraction) * Math.PI) / Math.sin(Math.PI)
+    const B = Math.sin(fraction * Math.PI) / Math.sin(Math.PI)
+    
+    const x = A * Math.cos(startLat) * Math.cos(startLon) + B * Math.cos(endLat) * Math.cos(endLon)
+    const y = A * Math.cos(startLat) * Math.sin(startLon) + B * Math.cos(endLat) * Math.sin(endLon)
+    const z = A * Math.sin(startLat) + B * Math.sin(endLat)
+    
+    // Convert back to lat/lon
+    const lat = Math.atan2(z, Math.sqrt(x * x + y * y)) * 180 / Math.PI
+    const lon = Math.atan2(y, x) * 180 / Math.PI
+    
+    // Project to Mollweide
+    const projectedPoint = latLonToProjected(lat, lon)
+    points.push(projectedPoint)
+  }
+  
+  return points
+}
+
 const WorldMap = ({
   airports,
-  width = 2000,
-  height = 1000,
-  backgroundColor = '#00000000',
-  landOutlineColor = '#000000',
-  landFillColor = '#ffffff',
-  airportColor = '#6a7282', 
-  gridLines = true
+  className = '',
 }: WorldMapProps) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
   
   // Map adjustment parameters
   const horizontalOffset = 0
-  const verticalOffset = 3.4 // Extract the vertical offset into a configurable variable
+  const verticalOffset = 3.4
   
-  // Convert lat/lon to Mollweide projection coordinates
-  // Using the formula from Wikipedia
-  const latLonToProjected = (lat: number, lon: number, centralMeridian = 0): [number, number] => {
-    // Convert to radians
-    const latRad = (lat * Math.PI) / 180
-    const lonRad = ((lon - centralMeridian) * Math.PI) / 180
-    
-    // Special case for poles to avoid division by zero
-    if (Math.abs(lat) === 90) {
-      const theta = lat > 0 ? Math.PI / 2 : -Math.PI / 2
-      const x = 0
-      const y = Math.sqrt(2) * Math.sin(theta)
-      return [x, y]
-    }
-    
-    // Start with initial guess for theta (parametric latitude)
-    let theta = latRad
-    
-    // Iteratively solve the Mollweide equation using improved Newton-Raphson formula
-    // 2θ + sin(2θ) = π·sin(φ)
-    const MAX_ITERATIONS = 10
-    for (let i = 0; i < MAX_ITERATIONS; i++) {
-      // Using the numerically stable version of the formula from the Wikipedia notes
-      theta = theta - (2 * theta + Math.sin(2 * theta) - Math.PI * Math.sin(latRad)) / 
-              (4 * Math.cos(theta) * Math.cos(theta))
-    }
-    
-    // Calculate x and y using the formula from Wikipedia
-    const x = (2 * Math.sqrt(2) / Math.PI) * lonRad * Math.cos(theta)
-    const y = Math.sqrt(2) * Math.sin(theta)
-    
-    return [x, y]
+  // Border stroke width - added to handle proper sizing
+  const strokeWidth = 2
+  
+  // Project coordinates to screen space
+  const projectPoint = ([x, y]: [number, number], scale: number, offsetX: number, offsetY: number): [number, number] => {
+    return [x * scale + offsetX, -y * scale + offsetY]
   }
 
+  // Handle resize to maintain responsiveness
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    // Clear canvas with specified background
-    ctx.fillStyle = backgroundColor
-    ctx.fillRect(0, 0, width, height)
+    const handleResize = () => {
+      if (containerRef.current) {
+        const width = containerRef.current.clientWidth
+        const height = width / 2 // Maintain 2:1 aspect ratio
+        setDimensions({ width, height })
+      }
+    }
     
-    // Center the map horizontally
+    // Initial size calculation
+    handleResize()
+    
+    // Set up resize listener
+    window.addEventListener('resize', handleResize)
+    
+    // Clean up
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
+    if (!svgRef.current || dimensions.width === 0) return
+
+    const svg = svgRef.current
+    const { width, height } = dimensions
     const offsetX = width / 2
-    // Adjust the vertical center to move the map down slightly
     const offsetY = height / 2
-    
-    // For Mollweide projection, the ideal width:height ratio is 2:1
-    // Set the ellipse width to 100% of the canvas width
-    const ellipseWidth = width
-    
-    // Calculate ellipse height based on the 2:1 ratio of Mollweide
+    const ellipseWidth = width - strokeWidth
     const ellipseHeight = ellipseWidth / 2
-    
-    // Calculate scale based on the ellipse width
-    // The theoretical width of Mollweide is 4*sqrt(2), so we scale accordingly
     const scale = ellipseWidth / (4 * Math.sqrt(2))
+    const dataScaleFactor = 1.56e-7
+
+    // Clear existing content
+    svg.innerHTML = ''
+
+    // Create SVG group for the map
+    const mapGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+    mapGroup.setAttribute('class', 'map-group')
+    svg.appendChild(mapGroup)
+
+    // Create a clip path for the elliptical boundary
+    const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath')
+    clipPath.setAttribute('id', 'map-boundary-clip')
+    svg.appendChild(clipPath)
     
-    // Project coordinates to screen space
-    const projectPoint = ([x, y]: [number, number]): [number, number] => {
-      return [x * scale + offsetX, -y * scale + offsetY]
-    }
-    
-    // Draw the elliptical boundary of the projection (2:1 ratio)
-    ctx.beginPath()
-    ctx.strokeStyle = '#000000'
-    ctx.lineWidth = 1.5
-    
-    // Draw ellipse
-    ctx.ellipse(offsetX, offsetY, ellipseWidth / 2, ellipseHeight / 2, 0, 0, 2 * Math.PI)
-    ctx.stroke()
-    
-    // Draw grid lines if requested
-    if (gridLines) {
-      ctx.strokeStyle = '#000000'
-      ctx.lineWidth = 1
+    const clipEllipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse')
+    clipEllipse.setAttribute('cx', offsetX.toString())
+    clipEllipse.setAttribute('cy', offsetY.toString())
+    clipEllipse.setAttribute('rx', ((ellipseWidth / 2) - strokeWidth/2).toString())
+    clipEllipse.setAttribute('ry', ((ellipseHeight / 2) - strokeWidth/2).toString())
+    clipPath.appendChild(clipEllipse)
+
+    // Draw the elliptical boundary
+    const boundary = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse')
+    boundary.setAttribute('cx', offsetX.toString())
+    boundary.setAttribute('cy', offsetY.toString())
+    boundary.setAttribute('rx', (ellipseWidth / 2).toString())
+    boundary.setAttribute('ry', (ellipseHeight / 2).toString())
+    boundary.setAttribute('class', 'map-boundary')
+    boundary.setAttribute('stroke-width', '1')
+    mapGroup.appendChild(boundary)
+
+    // Create a group for map content that will be clipped
+    const contentGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+    contentGroup.setAttribute('clip-path', 'url(#map-boundary-clip)')
+    mapGroup.appendChild(contentGroup)
+
+    // Draw grid lines
+    const gridGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+    gridGroup.setAttribute('class', 'grid-lines')
+    contentGroup.appendChild(gridGroup)
+
+    // Draw meridians (longitude lines)
+    for (let lon = -180; lon <= 180; lon += 30) {
+      // Skip the extremes
+      if (lon === -180 || lon === 180) continue;
       
-      // Draw meridians (lines of longitude)
-      for (let lon = -180; lon <= 180; lon += 30) {
-        ctx.beginPath()
-        for (let lat = -89; lat <= 89; lat += 1) {
-          const [projX, projY] = latLonToProjected(lat, lon)
-          const [px, py] = projectPoint([projX, projY])
-          
-          if (lat === -89) ctx.moveTo(px, py)
-          else ctx.lineTo(px, py)
+      const points = [];
+      
+      // Generate more points for smoother curves
+      for (let lat = -89.5; lat <= 89.5; lat += 1) {
+        const [projX, projY] = latLonToProjected(lat, lon)
+        const [px, py] = projectPoint([projX, projY], scale, offsetX, offsetY)
+        
+        // Only add points within the elliptical boundary
+        const normalizedX = (px - offsetX) / (ellipseWidth / 2)
+        const normalizedY = (py - offsetY) / (ellipseHeight / 2)
+        
+        if (normalizedX * normalizedX + normalizedY * normalizedY <= 1) {
+          points.push([px, py])
         }
-        ctx.stroke()
       }
       
-      // Draw parallels (lines of latitude)
-      for (let lat = -60; lat <= 60; lat += 30) {
-        ctx.beginPath()
-        for (let lon = -180; lon <= 180; lon += 1) {
-          const [projX, projY] = latLonToProjected(lat, lon)
-          const [px, py] = projectPoint([projX, projY])
-          
-          if (lon === -180) ctx.moveTo(px, py)
-          else ctx.lineTo(px, py)
-        }
-        ctx.stroke()
+      if (points.length > 1) {
+        // Use polyline instead of path for grid lines
+        const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline')
+        const pointsAttr = points.map(([x, y]) => `${x},${y}`).join(' ')
+        polyline.setAttribute('points', pointsAttr)
+        polyline.setAttribute('class', 'meridian')
+        polyline.setAttribute('stroke-width', '1')
+        gridGroup.appendChild(polyline)
       }
     }
-    
+
+    // Draw parallels (latitude lines)
+    for (let lat = -60; lat <= 60; lat += 30) {
+      // For parallels, we'll calculate where the latitude line intersects the ellipse
+      // and make sure it goes from edge to edge
+      
+      // First generate points to find the curve
+      const curvePoints: [number, number][] = [];
+      for (let lon = -179; lon <= 179; lon += 3) {
+        const [projX, projY] = latLonToProjected(lat, lon)
+        const [px, py] = projectPoint([projX, projY], scale, offsetX, offsetY)
+        
+        // Only calculate points within the elliptical boundary for the curve
+        const normalizedX = (px - offsetX) / (ellipseWidth / 2)
+        const normalizedY = (py - offsetY) / (ellipseHeight / 2)
+        
+        if (normalizedX * normalizedX + normalizedY * normalizedY <= 1) {
+          curvePoints.push([px, py])
+        }
+      }
+      
+      if (curvePoints.length > 1) {
+        // Now find where this curve should intersect the ellipse boundary
+        // For each parallel, find the leftmost and rightmost intersections with the ellipse
+        
+        // First find the y-position where this latitude would appear on the map
+        const [, centerY] = projectPoint([0, latLonToProjected(lat, 0)[1]], scale, offsetX, offsetY)
+        
+        // Function to find the intersection of the parallel with the ellipse
+        const findIntersection = (fromLeft: boolean): [number, number] => {
+          const a = ellipseWidth / 2
+          const b = ellipseHeight / 2
+          const y0 = centerY - offsetY
+          
+          // If y0 is outside the ellipse's vertical range, return null
+          if (Math.abs(y0) > b) {
+            // Fall back to a point on the curve if no intersection
+            return fromLeft ? curvePoints[0] : curvePoints[curvePoints.length - 1]
+          }
+          
+          // Calculate the x-coordinate where the horizontal line at y0 intersects the ellipse
+          const x0 = a * Math.sqrt(1 - (y0 * y0) / (b * b))
+          
+          return fromLeft ? [offsetX - x0, centerY] : [offsetX + x0, centerY]
+        }
+        
+        // Get the left and right intersection points
+        const leftPoint = findIntersection(true)
+        const rightPoint = findIntersection(false)
+        
+        // Combine the points to create a complete line
+        const finalPoints = [leftPoint, ...curvePoints, rightPoint]
+        
+        // Draw the parallel line
+        const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline')
+        const pointsAttr = finalPoints.map(([x, y]) => `${x},${y}`).join(' ')
+        polyline.setAttribute('points', pointsAttr)
+        polyline.setAttribute('class', 'parallel')
+        polyline.setAttribute('stroke-width', '1')
+        gridGroup.appendChild(polyline)
+      }
+    }
+
     // Draw land outlines
-    ctx.strokeStyle = landOutlineColor
-    ctx.fillStyle = landFillColor
-    ctx.lineWidth = 1
-    
+    const landGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+    landGroup.setAttribute('class', 'land-outlines')
+    contentGroup.appendChild(landGroup)
+
     const typedGeoJsonData = geoJsonData as unknown as GeoJSONData
-    
-    // Calculate the appropriate scale factor for the GeoJSON data
     const geoJsonRangeX = BOUNDS.maxX - BOUNDS.minX
     const geoJsonRangeY = BOUNDS.maxY - BOUNDS.minY
-    
-    // The ideal range for Mollweide projection is from -2√2 to 2√2 for x and -√2 to √2 for y
-    // const idealRangeX = 4 * Math.sqrt(2)
-    // const idealRangeY = 2 * Math.sqrt(2)
-    
-    // Output values to console for direct configuration
-    // console.log('Map scaling values:', {
-    //   bounds: BOUNDS,
-    //   geoJsonRangeX,
-    //   geoJsonRangeY,
-    //   idealRangeX,
-    //   idealRangeY,
-    //   width,
-    //   height,
-    //   offsetX,
-    //   offsetY,
-    //   ellipseWidth,
-    //   ellipseHeight,
-    //   scale
-    // });
-    
-    // Hard-coded scaling factor from console output
-    // Original calculation:
-    // const xFactor = idealRangeX / geoJsonRangeX * 0.98
-    // const yFactor = idealRangeY / geoJsonRangeY * 0.98
-    // const dataScaleFactor = Math.min(xFactor, yFactor)
-    
-    // Using hard-coded value from console output
-    const dataScaleFactor = 1.56e-7;
-    
-    // console.log('Calculated factors:', { xFactor, yFactor, dataScaleFactor });
-    
+
     typedGeoJsonData.features.forEach((feature) => {
       const coordsList = extractCoordinates(feature.geometry)
-      
       coordsList.forEach(ring => {
-        ctx.beginPath()
+        if (ring.length < 3) return; // Skip invalid polygons
         
-        ring.forEach(([x, y], i) => {
-          // Normalize to center of bounds
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+        const points = ring.map(([x, y]) => {
           const normalizedX = x - (BOUNDS.minX + geoJsonRangeX / 2)
           const normalizedY = y - (BOUNDS.minY + geoJsonRangeY / 2)
-          
-          // Scale to match the elliptical boundary
           const scaledX = normalizedX * dataScaleFactor
-          const scaledY = normalizedY * dataScaleFactor
-          
-          const [projX, projY] = projectPoint([scaledX, scaledY])
-
-          const [px, py] = [projX + horizontalOffset, projY + verticalOffset]
-          
-          if (i === 0) ctx.moveTo(px, py)
-          else ctx.lineTo(px, py)
+          const scaledY = normalizedY * dataScaleFactor * 1.02
+          return [scaledX, scaledY]
         })
         
-        ctx.closePath()
-        ctx.fill()
-        ctx.stroke()
+        // Create a proper SVG path with area
+        let pathData = `M ${points[0][0] * scale + offsetX + horizontalOffset} ${-points[0][1] * scale + offsetY + verticalOffset} `;
+        for (let i = 1; i < points.length; i++) {
+          pathData += `L ${points[i][0] * scale + offsetX + horizontalOffset} ${-points[i][1] * scale + offsetY + verticalOffset} `;
+        }
+        pathData += 'Z'; // Close the path
+        
+        path.setAttribute('d', pathData)
+        path.setAttribute('class', 'land')
+        path.setAttribute('stroke-width', '1')
+        landGroup.appendChild(path)
       })
     })
-    
-    // Draw airports with color based on delay status
+
+    // Draw airports
+    const airportGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+    airportGroup.setAttribute('class', 'airports')
+    contentGroup.appendChild(airportGroup)
+
     airports.forEach((airport) => {
       const [projX, projY] = latLonToProjected(airport.lat, airport.lon)
-      const [px, py] = projectPoint([projX, projY])
-      
-      // Check if the airport is within the elliptical boundary
+      const [px, py] = projectPoint([projX, projY], scale, offsetX, offsetY)
+
+      // Check if airport is within the elliptical boundary
       const normalizedX = (px - offsetX) / (ellipseWidth / 2)
       const normalizedY = (py - offsetY) / (ellipseHeight / 2)
-      
+
       if (normalizedX * normalizedX + normalizedY * normalizedY <= 1) {
-        // Set color based on delay status
-        if (airport.delay_status) {
-          switch (airport.delay_status.color) {
-            case 'red':
-              ctx.fillStyle = '#FF0000' // Red
-              break
-            case 'yellow':
-              ctx.fillStyle = '#FFCC00' // Yellow
-              break
-            case 'green':
-              ctx.fillStyle = '#00CC00' // Green
-              break
-            default:
-              ctx.fillStyle = airportColor
-          }
-        } else {
-          ctx.fillStyle = airportColor
-        }
-        
-        ctx.beginPath()
-        ctx.arc(px, py, 4, 0, Math.PI * 2)
-        ctx.fill()
-        
-        // Add a small white outline
-        ctx.strokeStyle = '#ffffff'
-        ctx.lineWidth = 0.5
-        ctx.stroke()
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+        circle.setAttribute('cx', px.toString())
+        circle.setAttribute('cy', py.toString())
+        // Use a relative radius based on the map size for better responsiveness
+        const radius = Math.max(3, Math.min(4, width / 500))
+        circle.setAttribute('r', radius.toString())
+        circle.setAttribute('class', `airport ${airport.delay_status ? `delay-${airport.delay_status.color}` : ''}`)
+        airportGroup.appendChild(circle)
       }
     })
-    
-    // // Draw equator line
-    // ctx.beginPath()
-    // ctx.strokeStyle = '#888888'
-    // ctx.lineWidth = 1
-    // ctx.setLineDash([5, 5])
-    // const equatorLeftX = offsetX - ellipseWidth / 2
-    // const equatorRightX = offsetX + ellipseWidth / 2
-    // ctx.moveTo(equatorLeftX, offsetY)
-    // ctx.lineTo(equatorRightX, offsetY)
-    // ctx.stroke()
-    // ctx.setLineDash([])
-    
-    // // Draw central meridian
-    // ctx.beginPath()
-    // ctx.strokeStyle = '#888888'
-    // ctx.lineWidth = 1
-    // ctx.setLineDash([5, 5])
-    // const meridianTopY = offsetY - ellipseHeight / 2
-    // const meridianBottomY = offsetY + ellipseHeight / 2
-    // ctx.moveTo(offsetX, meridianTopY)
-    // ctx.lineTo(offsetX, meridianBottomY)
-    // ctx.stroke()
-    // ctx.setLineDash([])
-    
-  }, [airports, width, height, backgroundColor, landOutlineColor, landFillColor, airportColor, gridLines])
+
+    // Draw flight routes between all airport pairs from routes.json
+    const routesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+    routesGroup.setAttribute('class', 'flight-routes')
+    contentGroup.appendChild(routesGroup)
+
+    // Create a map of ICAO codes to airport objects for quick lookup
+    const airportMap = new Map(airports.map(airport => [airport.icao_code, airport]))
+
+    // Draw routes for each pair in routes.json
+    routesData.routes.forEach(([startIcao, endIcao]) => {
+      const startAirport = airportMap.get(startIcao)
+      const endAirport = airportMap.get(endIcao)
+
+      if (!startAirport || !endAirport) return
+
+      // Get projected points along the great circle
+      const pathPoints = drawGreatCircleLine(startAirport, endAirport)
+      
+      // Only draw path if there are enough points
+      if (pathPoints.length > 1) {
+        // Create path for the flight route
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+        
+        // Build path data from points
+        let pathData = ""
+        let segmentStart = 0
+        
+        // We need to handle the path potentially crossing the edge of the map
+        while (segmentStart < pathPoints.length - 1) {
+          let segmentEnd = pathPoints.length - 1
+          
+          // Find where the path might cross the edge of the projection
+          for (let i = segmentStart + 1; i < pathPoints.length; i++) {
+            const [x1, ] = pathPoints[i - 1]
+            const [x2, ] = pathPoints[i]
+            
+            // If there's a large jump in x coordinate, it's probably crossing the edge
+            if (Math.abs(x2 - x1) > 0.5) {
+              segmentEnd = i - 1
+              break
+            }
+          }
+          
+          // Create path segment
+          let segmentData = ""
+          for (let i = segmentStart; i <= segmentEnd; i++) {
+            const [projX, projY] = pathPoints[i]
+            const [px, py] = projectPoint([projX, projY], scale, offsetX, offsetY)
+            
+            // Only include points within the elliptical boundary
+            const normalizedX = (px - offsetX) / (ellipseWidth / 2)
+            const normalizedY = (py - offsetY) / (ellipseHeight / 2)
+            
+            if (normalizedX * normalizedX + normalizedY * normalizedY <= 1) {
+              if (segmentData === "") {
+                segmentData = `M ${px} ${py}`
+              } else {
+                segmentData += ` L ${px} ${py}`
+              }
+            }
+          }
+          
+          // Add this segment to the overall path
+          if (segmentData !== "") {
+            pathData += (pathData ? " " : "") + segmentData
+          }
+          
+          // Move to the next segment start
+          segmentStart = segmentEnd + 1
+        }
+        
+        path.setAttribute('d', pathData)
+        path.setAttribute('class', 'flight-route')
+        path.setAttribute('stroke-width', '1')
+        routesGroup.appendChild(path)
+      }
+    })
+
+  }, [airports, dimensions])
 
   return (
-    <div className="relative flex items-center justify-center">
-      <canvas
-        ref={canvasRef}
-        width={width}
-        height={height}
-        className="border-0 rounded-none dark:invert"
-        style={{ maxWidth: '100%', height: 'auto' }}
+    <div ref={containerRef} className={`relative w-full ${className}`}>
+      <svg
+        ref={svgRef}
+        width="100%"
+        height={dimensions.height}
+        viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+        preserveAspectRatio="xMidYMid meet"
+        className="border-0 rounded-none transition-colors duration-300"
         aria-label="Mollweide projection world map"
-        tabIndex={0}
       />
     </div>
   )
