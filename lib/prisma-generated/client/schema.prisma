@@ -4,8 +4,9 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../lib/prisma-generated/client"
+  provider        = "prisma-client-js"
+  output          = "../lib/prisma-generated/client"
+  previewFeatures = ["driverAdapters"]
 }
 
 model Metric {
