@@ -6,7 +6,7 @@ async function returnMockDataWithDelay<T>(): Promise<T> {
   await new Promise((resolve) => setTimeout(resolve, 1000))
   return mockData as T
 }
-l
+
 export async function fetchFromFlightAware<T>(endpoint: string): Promise<T> {
   const useMockData = true
 
