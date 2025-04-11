@@ -1,10 +1,10 @@
 export const runtime = 'edge'
 
 import { PrismaClient } from '@prisma/client/edge'
-import { withAccelerate } from '@prisma/extension-accelerate'
 import { NextResponse } from 'next/server'
 
-const prisma = new PrismaClient().$extends(withAccelerate())
+// Initialize Prisma Client with Data Proxy
+const prisma = new PrismaClient()
 
 // Define allowed origins - replace with your actual domain
 const allowedOrigins = ['https://nextjs-hackathon-2025-eight.vercel.app', 'http://localhost:3000']
@@ -41,19 +41,28 @@ export async function GET(request: Request) {
     return new NextResponse('Forbidden', { status: 403 })
   }
 
-  const metrics = await prisma.metric.findMany({
-    include: {
-      metrics: {
-        include: {
-          navigationTiming: true
-        }
-      },
-      connection: true
-    }
-  })
-  
-  const headers = setCorsHeaders(origin)
-  return NextResponse.json(metrics, { headers })
+  try {
+    const metrics = await prisma.metric.findMany({
+      include: {
+        metrics: {
+          include: {
+            navigationTiming: true
+          }
+        },
+        connection: true
+      }
+    })
+    
+    const headers = setCorsHeaders(origin)
+    return NextResponse.json(metrics, { headers })
+  } catch (error) {
+    console.error('Error fetching metrics:', error)
+    const headers = setCorsHeaders(origin)
+    return NextResponse.json(
+      { error: 'Failed to fetch metrics' },
+      { headers, status: 500 }
+    )
+  }
 }
 
 export async function POST(request: Request) {
