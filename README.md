@@ -30,7 +30,6 @@ We want to help **before** you book, by showing:
 
 - **Next.js 15 (App Router + Server Actions)**  
 - **Tailwind CSS v4**  
-- **Prisma** with PostgreSQL for metrics storage
 - **Upstash** for rate-limiting and async coordination  
 - **FlightAware AeroAPI** as primary data source  
 
@@ -75,26 +74,11 @@ pnpm install
 Create a `.env.local` file in the root directory with the following variables:
 
 ```env
-# Database
-DATABASE_URL="postgresql://user:password@localhost:5432/flight_delay_insight"
-
 # API Keys
 FLIGHTAWARE_API_KEY=your_key_here
 ```
 
-### 4. Set up the database
-
-1. Make sure you have PostgreSQL installed and running locally
-2. Create a new database:
-```bash
-createdb flight_delay_insight
-```
-3. Run database migrations:
-```bash
-pnpm prisma migrate dev
-```
-
-### 5. Start the development server
+### 4. Start the development server
 
 ```bash
 pnpm run dev
@@ -118,10 +102,7 @@ The app will be available at `http://localhost:3000`
 
 /lib
   fetch.ts                         → AeroAPI fetch wrapper
-  metric-store.ts                  → Metric storage with Prisma
-
-/prisma
-  schema.prisma                    → Database schema
+  metric-store.ts                  → Metric storage
 ```
 
 ---

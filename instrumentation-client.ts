@@ -1,4 +1,4 @@
-import { onCLS, onFCP, onINP, onLCP, onTTFB, Metric } from 'web-vitals';
+import { onCLS, onFCP, onINP, onLCP, onTTFB } from 'web-vitals';
 
 // Define the metrics interface
 interface PageMetrics {
@@ -84,9 +84,6 @@ const collectNavigationTiming = () => {
     console.error('Error collecting navigation timing:', error);
   }
 };
-
-// Minimum time between API calls to prevent flooding (2000ms = 2s)
-const MIN_API_CALL_INTERVAL = 2000;
 
 // Function to schedule metrics save with throttling
 const scheduleSaveMetrics = (isFinal = false, delay = 0) => {

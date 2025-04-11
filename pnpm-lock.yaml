@@ -117,9 +117,6 @@ importers:
       eslint-config-next:
         specifier: 15.3.0
         version: 15.3.0(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3)
-      prisma:
-        specifier: ^6.6.0
-        version: 6.6.0(typescript@5.8.3)
       tailwindcss:
         specifier: ^4
         version: 4.1.3
@@ -3325,10 +3322,13 @@ snapshots:
       esbuild-register: 3.6.0(esbuild@0.25.2)
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
-  '@prisma/debug@6.6.0': {}
+  '@prisma/debug@6.6.0':
+    optional: true
 
-  '@prisma/engines-version@6.6.0-53.f676762280b54cd07c770017ed3711ddde35f37a': {}
+  '@prisma/engines-version@6.6.0-53.f676762280b54cd07c770017ed3711ddde35f37a':
+    optional: true
 
   '@prisma/engines@6.6.0':
     dependencies:
@@ -3336,6 +3336,7 @@ snapshots:
       '@prisma/engines-version': 6.6.0-53.f676762280b54cd07c770017ed3711ddde35f37a
       '@prisma/fetch-engine': 6.6.0
       '@prisma/get-platform': 6.6.0
+    optional: true
 
   '@prisma/extension-accelerate@1.3.0(@prisma/client@6.6.0(prisma@6.6.0(typescript@5.8.3))(typescript@5.8.3))':
     dependencies:
@@ -3346,10 +3347,12 @@ snapshots:
       '@prisma/debug': 6.6.0
       '@prisma/engines-version': 6.6.0-53.f676762280b54cd07c770017ed3711ddde35f37a
       '@prisma/get-platform': 6.6.0
+    optional: true
 
   '@prisma/get-platform@6.6.0':
     dependencies:
       '@prisma/debug': 6.6.0
+    optional: true
 
   '@radix-ui/number@1.1.0': {}
 
@@ -4456,6 +4459,7 @@ snapshots:
       esbuild: 0.25.2
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   esbuild@0.25.2:
     optionalDependencies:
@@ -5500,6 +5504,7 @@ snapshots:
       typescript: 5.8.3
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   promise-inflight@1.0.1:
     optional: true
