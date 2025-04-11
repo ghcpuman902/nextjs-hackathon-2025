@@ -140,4 +140,15 @@
   100% {
     stroke-dashoffset: 8;
   }
+}
+
+/* User location marker styles */
+.user-location {
+  fill: var(--color-blue-500);
+  stroke: white;
+  stroke-width: 2;
+}
+
+.user-location-inner {
+  fill: white;
 } 

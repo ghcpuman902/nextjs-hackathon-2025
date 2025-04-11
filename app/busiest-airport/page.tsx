@@ -3,7 +3,6 @@ import { getAirportDelays } from "../actions/airport-data"
 import airports from "./busiest-airports.json"
 import { Suspense } from "react"
 
-
 export default function BusiestAirportPage() {
     // Start fetching airport delays early (not awaited)
     const airportDelaysPromise = getAirportDelays()
@@ -11,7 +10,6 @@ export default function BusiestAirportPage() {
     // Get the first airport's ICAO code to prefetch its flight data
     const firstAirportIcao = Object.keys(airports)[0]
     
-    // We pass the raw airports object and let AirportMapInterface transform it with the delay data
     return (
         <div className="w-full min-h-screen border border-foreground border-b-0">
             {/* <div className="text-base lg:text-2xl font-black mb-4 tracking-wide">World&apos;s Busiest Routes</div> */}

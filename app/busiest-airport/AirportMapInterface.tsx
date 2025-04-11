@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { use } from 'react'
 import WorldMap from './WorldMap'
 import AirportDetails from './AirportDetails'
@@ -37,6 +37,32 @@ export default function AirportMapInterface({
 }: AirportMapInterfaceProps) {
   // Use the React 'use' hook to unwrap the promise
   const delaysData = use(airportDelaysPromise)
+
+  // Location state
+  const [userLocation, setUserLocation] = useState<{
+    city: string | undefined
+    country: string | undefined
+    latitude: string | undefined
+    longitude: string | undefined
+  } | null>(null)
+
+  // Fetch location data
+  useEffect(() => {
+    const fetchLocation = async () => {
+      try {
+        const response = await fetch('/api/geo')
+        if (!response.ok) {
+          throw new Error('Failed to fetch location data')
+        }
+        const data = await response.json()
+        setUserLocation(data)
+      } catch (err) {
+        console.error('Error fetching location:', err)
+      }
+    }
+
+    fetchLocation()
+  }, [])
 
   // Transform the airports data and include delay information
   const airports: Airport[] = Object.entries(airportsData).map(([icao, airport]) => {
@@ -86,6 +112,7 @@ export default function AirportMapInterface({
           selectedAirport={selectedAirport}
           onAirportSelect={handleAirportSelect}
           className="w-full h-full"
+          userLocation={userLocation || undefined}
         />
       </div>
       <div className="lg:w-[400px] h-full flex flex-col">

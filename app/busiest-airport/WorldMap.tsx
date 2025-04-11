@@ -11,6 +11,12 @@ interface WorldMapProps {
   className?: string
   onAirportSelect?: (airport: Airport) => void
   selectedAirport?: Airport | null
+  userLocation?: {
+    city: string | undefined
+    country: string | undefined
+    latitude: string | undefined
+    longitude: string | undefined
+  }
 }
 
 // GeoJSON types
@@ -130,11 +136,13 @@ const WorldMap = ({
   className = '',
   onAirportSelect,
   selectedAirport = null,
+  userLocation
 }: WorldMapProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
-  const [dimensions, setDimensions] = useState({ width: 100, height: 100 })
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
   const [localSelectedAirport, setLocalSelectedAirport] = useState<Airport | null>(selectedAirport)
+  const [userCoords, setUserCoords] = useState<[number, number] | null>(null)
   
   // Update local state when prop changes
   useEffect(() => {
@@ -153,25 +161,21 @@ const WorldMap = ({
     return [x * scale + offsetX, -y * scale + offsetY]
   }
 
-  // Handle resize to maintain responsiveness
   useEffect(() => {
-    const handleResize = () => {
-      if (containerRef.current) {
-        const width = containerRef.current.clientWidth
-        const height = containerRef.current.clientHeight
-        setDimensions({ width, height })
-      }
+    if (!containerRef.current) return
+
+    const { width, height } = containerRef.current.getBoundingClientRect()
+    setDimensions({ width, height })
+
+    // Calculate user location coordinates if available
+    if (userLocation?.latitude && userLocation?.longitude) {
+      const coords = latLonToProjected(
+        parseFloat(userLocation.latitude),
+        parseFloat(userLocation.longitude)
+      )
+      setUserCoords(coords)
     }
-    
-    // Initial size calculation
-    handleResize()
-    
-    // Set up resize listener
-    window.addEventListener('resize', handleResize)
-    
-    // Clean up
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  }, [userLocation])
 
   // Handle airport selection - wrapped in useCallback to prevent recreation on every render
   const handleAirportClick = useCallback((airport: Airport) => {
@@ -513,19 +517,42 @@ const WorldMap = ({
       }
     })
 
-  }, [airports, dimensions, localSelectedAirport, handleAirportClick])
+    // Draw user location if available
+    if (userCoords) {
+      // Remove canvas-specific code
+    }
+
+  }, [airports, dimensions, localSelectedAirport, handleAirportClick, userCoords])
 
   return (
     <div ref={containerRef} className={`relative w-full ${className}`}>
       <svg
         ref={svgRef}
-        width="100%"
+        width={dimensions.width}
         height={dimensions.height}
         viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
         preserveAspectRatio="xMidYMid meet"
         className="border-0 rounded-none transition-colors duration-300"
         aria-label="Mollweide projection world map"
-      />
+      >
+        {/* User location marker */}
+        {userCoords && (
+          <g>
+            <circle
+              cx={userCoords[0]}
+              cy={userCoords[1]}
+              r="8"
+              className="user-location"
+            />
+            <circle
+              cx={userCoords[0]}
+              cy={userCoords[1]}
+              r="4"
+              className="user-location-inner"
+            />
+          </g>
+        )}
+      </svg>
     </div>
   )
 }
