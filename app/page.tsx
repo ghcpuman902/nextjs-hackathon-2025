@@ -2,6 +2,7 @@ import { getDefaultFlights, preloadDefaultFlights } from "@/app/actions/flight-d
 import RawFlightData from "@/components/flight/raw-flight-data"
 import { Suspense } from "react"
 import FlightSearch from "@/components/flight/flight-search"
+import Link from "next/link"
 
 // Preload default flight data
 export function generateMetadata() {
@@ -29,6 +30,15 @@ export default function Home() {
 
           <div className="mb-6">
             <FlightSearch flightId="DAL2267" />
+          </div>
+
+          <div className="mb-6">
+            <Link 
+              href="/busiest-airport" 
+              className="inline-block bg-black text-white py-2 px-4 border border-black hover:bg-white hover:text-black transition-colors"
+            >
+              View Busiest Airports
+            </Link>
           </div>
         </div>
 

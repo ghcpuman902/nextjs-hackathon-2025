@@ -34,6 +34,7 @@ export async function fetchFromFlightAware<T>(endpoint: string): Promise<T> {
     throw new Error(`API request failed with status ${response.status}`)
   }
 
+  console.log("response ok, snapshot of returned data:", JSON.stringify(await response.json(), null, 2).slice(0, 100))
   return response.json()
 }
 

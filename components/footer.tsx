@@ -6,7 +6,7 @@ import { PageMetrics } from "@/components/metrics/page-metrics";
 export async function Footer() {
   return (
     <footer
-      className="w-full border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-0 pb-0 px-2"
+      className="w-full border border-foreground mb-0 pb-0 px-2"
     >
       <div className="text-base font-mono text-zinc-400 dark:text-zinc-500 text-center">
       <Suspense fallback={<div>Loading metrics...</div>}>

@@ -1,24 +1,16 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import geoJsonData from './mollweide.geo.json'
 import routesData from './routes.json'
 import './WorldMap.css'
-
-interface Airport {
-  lat: number
-  lon: number
-  icao_code: string
-  delay_status?: {
-    color: 'red' | 'yellow' | 'green'
-    category: string
-    delay_secs: number
-  } | null
-}
+import { Airport } from './types'
 
 interface WorldMapProps {
   airports: Airport[]
   className?: string
+  onAirportSelect?: (airport: Airport) => void
+  selectedAirport?: Airport | null
 }
 
 // GeoJSON types
@@ -134,19 +126,27 @@ const drawGreatCircleLine = (
 }
 
 const WorldMap = ({
-  airports,
+  airports = [],
   className = '',
+  onAirportSelect,
+  selectedAirport = null,
 }: WorldMapProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
+  const [dimensions, setDimensions] = useState({ width: 100, height: 100 })
+  const [localSelectedAirport, setLocalSelectedAirport] = useState<Airport | null>(selectedAirport)
   
+  // Update local state when prop changes
+  useEffect(() => {
+    setLocalSelectedAirport(selectedAirport)
+  }, [selectedAirport])
+
   // Map adjustment parameters
   const horizontalOffset = 0
   const verticalOffset = 3.4
   
   // Border stroke width - added to handle proper sizing
-  const strokeWidth = 2
+  const strokeWidth = 1
   
   // Project coordinates to screen space
   const projectPoint = ([x, y]: [number, number], scale: number, offsetX: number, offsetY: number): [number, number] => {
@@ -158,7 +158,7 @@ const WorldMap = ({
     const handleResize = () => {
       if (containerRef.current) {
         const width = containerRef.current.clientWidth
-        const height = width / 2 // Maintain 2:1 aspect ratio
+        const height = containerRef.current.clientHeight
         setDimensions({ width, height })
       }
     }
@@ -172,6 +172,14 @@ const WorldMap = ({
     // Clean up
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // Handle airport selection - wrapped in useCallback to prevent recreation on every render
+  const handleAirportClick = useCallback((airport: Airport) => {
+    setLocalSelectedAirport(airport)
+    if (onAirportSelect) {
+      onAirportSelect(airport)
+    }
+  }, [onAirportSelect])
 
   useEffect(() => {
     if (!svgRef.current || dimensions.width === 0) return
@@ -356,31 +364,6 @@ const WorldMap = ({
       })
     })
 
-    // Draw airports
-    const airportGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
-    airportGroup.setAttribute('class', 'airports')
-    contentGroup.appendChild(airportGroup)
-
-    airports.forEach((airport) => {
-      const [projX, projY] = latLonToProjected(airport.lat, airport.lon)
-      const [px, py] = projectPoint([projX, projY], scale, offsetX, offsetY)
-
-      // Check if airport is within the elliptical boundary
-      const normalizedX = (px - offsetX) / (ellipseWidth / 2)
-      const normalizedY = (py - offsetY) / (ellipseHeight / 2)
-
-      if (normalizedX * normalizedX + normalizedY * normalizedY <= 1) {
-        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-        circle.setAttribute('cx', px.toString())
-        circle.setAttribute('cy', py.toString())
-        // Use a relative radius based on the map size for better responsiveness
-        const radius = Math.max(3, Math.min(4, width / 500))
-        circle.setAttribute('r', radius.toString())
-        circle.setAttribute('class', `airport ${airport.delay_status ? `delay-${airport.delay_status.color}` : ''}`)
-        airportGroup.appendChild(circle)
-      }
-    })
-
     // Draw flight routes between all airport pairs from routes.json
     const routesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
     routesGroup.setAttribute('class', 'flight-routes')
@@ -459,7 +442,78 @@ const WorldMap = ({
       }
     })
 
-  }, [airports, dimensions])
+    // Draw airports
+    const airportGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+    airportGroup.setAttribute('class', 'airports')
+    contentGroup.appendChild(airportGroup)
+
+    // Create a highlighted airport group that will be drawn last (on top)
+    const highlightedAirportGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+    highlightedAirportGroup.setAttribute('class', 'highlighted-airports')
+    contentGroup.appendChild(highlightedAirportGroup)
+
+    // Draw all airports
+    airports.forEach((airport) => {
+      const [projX, projY] = latLonToProjected(airport.lat, airport.lon)
+      const [px, py] = projectPoint([projX, projY], scale, offsetX, offsetY)
+
+      // Check if airport is within the elliptical boundary
+      const normalizedX = (px - offsetX) / (ellipseWidth / 2)
+      const normalizedY = (py - offsetY) / (ellipseHeight / 2)
+
+      if (normalizedX * normalizedX + normalizedY * normalizedY <= 1) {
+        const isSelected = localSelectedAirport?.icao_code === airport.icao_code
+        const targetGroup = isSelected ? highlightedAirportGroup : airportGroup
+        
+        // Create airport marker
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+        circle.setAttribute('cx', px.toString())
+        circle.setAttribute('cy', py.toString())
+        
+        // Use a relative radius based on the map size for better responsiveness
+        const baseRadius = Math.max(3, Math.min(4, width / 500))
+        const radius = isSelected ? (baseRadius * 1.5).toString() : baseRadius.toString()
+        
+        circle.setAttribute('r', radius)
+        circle.setAttribute('class', `airport ${airport.delay_status ? `delay-${airport.delay_status.color}` : ''} ${isSelected ? 'selected' : ''}`)
+        
+        // Add title for accessibility
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
+        title.textContent = `${airport.name} (${airport.iata_code})`
+        circle.appendChild(title)
+        
+        // Add click event handler
+        circle.addEventListener('click', () => handleAirportClick(airport))
+        circle.setAttribute('tabindex', '0')
+        circle.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            handleAirportClick(airport)
+          }
+        })
+        
+        // Add cursor style to indicate clickability
+        circle.style.cursor = 'pointer'
+        
+        // If selected, add a label for the selected airport
+        if (isSelected) {
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+          text.setAttribute('x', (px + baseRadius * 2).toString())
+          text.setAttribute('y', (py - baseRadius).toString())
+          text.textContent = `${airport.iata_code}`
+          text.setAttribute('class', 'airport-label')
+          text.setAttribute('font-size', '10')
+          text.setAttribute('fill', 'white')
+          text.setAttribute('stroke', 'black')
+          text.setAttribute('stroke-width', '0.5')
+          targetGroup.appendChild(text)
+        }
+        
+        targetGroup.appendChild(circle)
+      }
+    })
+
+  }, [airports, dimensions, localSelectedAirport, handleAirportClick])
 
   return (
     <div ref={containerRef} className={`relative w-full ${className}`}>

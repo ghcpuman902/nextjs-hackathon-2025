@@ -4,6 +4,8 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 export default function FlightSearch({ flightId }: { flightId: string }) {
   const [flightNumber, setFlightNumber] = useState(flightId || "DAL2267")
@@ -26,28 +28,30 @@ export default function FlightSearch({ flightId }: { flightId: string }) {
 
   return (
     <div className="w-full max-w-md">
-      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
+      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row">
         <div className="flex-grow">
-          <label htmlFor="flight-search" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="flight-search" className="block text-sm font-medium mb-1">
             Search for a flight
           </label>
-          <input
-            type="text"
-            id="flight-search"
-            placeholder="Enter flight number (e.g., DAL2267)"
-            value={flightNumber}
-            onChange={(e) => setFlightNumber(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isSubmitting}
-          />
+          <div className="flex flex-row gap-0">
+            <Input
+              type="text"
+              id="flight-search"
+              placeholder="Enter flight number (e.g., DAL2267)"
+              value={flightNumber}
+              onChange={(e) => setFlightNumber(e.target.value)}
+              className="w-full px-4 py-2 border border-r-0 border-black focus:outline-none focus:ring-1 focus:ring-black rounded-none"
+              disabled={isSubmitting}
+            />
+            <Button
+              type="submit"
+              disabled={isSubmitting || !flightNumber.trim()}
+              className="px-4 py-2 bg-black text-white border border-black hover:bg-white hover:text-black transition-colors focus:outline-none focus:ring-1 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed self-end rounded-none"
+            >
+              {isSubmitting ? "Searching..." : "Search"}
+            </Button>
+          </div>
         </div>
-        <button
-          type="submit"
-          disabled={isSubmitting || !flightNumber.trim()}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed self-end h-10"
-        >
-          {isSubmitting ? "Searching..." : "Search"}
-        </button>
       </form>
       <p className="mt-2 text-sm text-gray-500">Example flight numbers: DAL2267, DAL2272, UAL123</p>
     </div>

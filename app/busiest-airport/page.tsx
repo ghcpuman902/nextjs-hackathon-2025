@@ -1,82 +1,31 @@
-import airports from "./busiest-airports.json"
-import WorldMap from "./WorldMap"
+import AirportMapInterface from "./AirportMapInterface"
 import { getAirportDelays } from "../actions/airport-data"
-import type { AirportDelays } from "../../lib/types"
+import airports from "./busiest-airports.json"
+import { Suspense } from "react"
 
-interface Airport {
-    name: string
-    iata_code: string
-    country_code: string
-    reason: string
-    elevation: number
-    city: string
-    state: string
-    longitude: number
-    latitude: number
-    timezone: string
-    type: string
-    wiki_url: string
-    timestamp: number
-}
 
-export default async function BusiestAirportPage() {
-    // Initialize with default value
-    let delaysData: AirportDelays = {
-        links: {},
-        num_pages: 0,
-        delays: []
-    }
-
-    try {
-        const response = await getAirportDelays()
-        // Only update if we got valid data
-        if (response && Array.isArray(response.delays)) {
-            delaysData = response
-        }
-    } catch (error) {
-        console.error("Failed to fetch airport delays:", error)
-    }
-
-    // Transform the airports data and include delay information
-    const airportLocations = Object.entries(airports).map(([icao, airport]: [string, Airport]) => {
-        // Try to find delay information for this airport
-        const airportDelay = delaysData.delays?.find(
-            (delay) => delay.airport === airport.iata_code
-        )
-        
-        return {
-            iata_code: airport.iata_code,
-            icao_code: icao, // Using the key as the ICAO code
-            lat: airport.latitude,
-            lon: airport.longitude,
-            delay_status: airportDelay
-                ? {
-                    color: airportDelay.color as 'red' | 'yellow' | 'green',
-                    category: airportDelay.category,
-                    delay_secs: airportDelay.delay_secs
-                }
-                : {
-                    color: 'green' as const,
-                    category: 'no delay',
-                    delay_secs: 0
-                }
-        }
-    })
-
+export default function BusiestAirportPage() {
+    // Start fetching airport delays early (not awaited)
+    const airportDelaysPromise = getAirportDelays()
+    
+    // Get the first airport's ICAO code to prefetch its flight data
+    const firstAirportIcao = Object.keys(airports)[0]
+    
+    // We pass the raw airports object and let AirportMapInterface transform it with the delay data
     return (
-        <div className="container mx-auto p-4">
-            <div className="mb-4 p-4 relative">
-                <div className="text-base lg:text-2xl font-black mb-4 tracking-wide absolute top-0 left-0">World&apos;s Busiest Routes</div>
-                <WorldMap
-                    airports={airportLocations}
+        <div className="w-full min-h-screen border border-foreground border-b-0">
+            {/* <div className="text-base lg:text-2xl font-black mb-4 tracking-wide">World&apos;s Busiest Routes</div> */}
+            <Suspense fallback={
+                <div className="flex items-center justify-center w-full h-screen">
+                    <div className="animate-pulse text-muted-foreground">Loading airport data...</div>
+                </div>
+            }>
+                <AirportMapInterface 
+                    airportsData={airports} 
+                    airportDelaysPromise={airportDelaysPromise}
+                    initialAirportIcao={firstAirportIcao}
                 />
-            </div>
-            {/* <div className="bg-muted text-muted-foreground p-4 rounded-lg">
-                <h2 className="text-xl font-semibold mb-2">Airport Data</h2>
-                <pre className="whitespace-pre-wrap break-words">
-                    {JSON.stringify(airportLocations.map((airport) => airport.icao_code), null, 2)}
-                </pre>
-            </div> */}
+            </Suspense>
         </div>
     )
 }

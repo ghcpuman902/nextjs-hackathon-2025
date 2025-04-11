@@ -5,7 +5,7 @@
   --land-stroke: var(--color-foreground);
   --grid-line-color: var(--color-foreground);
   --airport-fill: var(--color-green-500);
-  --airport-stroke: var(--color-foreground);
+  --airport-stroke: var(--color-background);
   --delay-red: var(--color-red-500);
   --delay-yellow: var(--color-yellow-500);
   --delay-green: var(--color-green-500);
@@ -23,42 +23,104 @@
 */
 
 .map-boundary {
-  fill: var(--map-background);
+  fill: none;
   stroke: var(--map-boundary-color);
-  stroke-width: 1.5;
 }
 
 .meridian,
 .parallel {
   fill: none;
   stroke: var(--grid-line-color);
-  stroke-width: 1.5;
-  opacity: 0.5;
-  pointer-events: none;
 }
 
 .land {
   fill: var(--land-fill);
   stroke: var(--land-stroke);
-  stroke-width: 1;
 }
 
 .airport {
   fill: var(--airport-fill);
   stroke: var(--airport-stroke);
-  stroke-width: 0.5;
+  stroke-width: 0;
+  opacity: 1;
+  cursor: pointer;
+  transition: r 0.2s, opacity 0.2s;
 }
 
-.airport.delay-red {
+.airport:hover {
+  opacity: 1;
+  fill: var(--airport-fill);
+}
+
+.airport.selected {
+  opacity: 1;
+  stroke-width: 0.5;
+  z-index: 100;
+}
+
+.airport-pulse {
+  fill: none;
+  stroke: var(--airport-stroke);
+  stroke-width: 1;
+  opacity: 0;
+  animation: blink 2s infinite;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+    stroke-width: 0;
+  }
+  50% {
+    opacity: 0.6;
+    stroke-width: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+    stroke-width: 0;
+  }
+}
+
+.airport-label {
+  font-family: var(--font-mono), 'Courier New', Courier, monospace;
+  font-weight: 900;
+  text-anchor: start;
+  dominant-baseline: middle;
+  paint-order: stroke;
+  fill: var(--color-foreground);
+  stroke: var(--color-muted);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+
+.delay-red {
   fill: var(--delay-red);
 }
 
-.airport.delay-yellow {
+.delay-yellow {
   fill: var(--delay-yellow);
 }
 
-.airport.delay-green {
+.delay-green {
   fill: var(--delay-green);
+}
+
+/* Make selected airports larger and more visible */
+.delay-red.selected {
+  fill: var(--delay-red);
+  filter: drop-shadow(0 0 3px var(--delay-red));
+}
+
+.delay-yellow.selected {
+  fill: var(--delay-yellow);
+  filter: drop-shadow(0 0 3px var(--delay-yellow));
+}
+
+.delay-green.selected {
+  fill: var(--delay-green);
+  filter: drop-shadow(0 0 3px var(--delay-green));
 }
 
 .flight-route {
@@ -66,7 +128,6 @@
   stroke: var(--flight-route-color);
   stroke-width: var(--flight-route-width);
   stroke-dasharray: 4, 4;
-  /* stroke-linecap: round; */
   pointer-events: none;
   animation: dash-blink 1s steps(2, jump-start) infinite;
 }
